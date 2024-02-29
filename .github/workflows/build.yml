@@ -30,3 +30,8 @@ jobs:
       run: |
         chmod +x gab-app/scripts/setup.sh
         ./gab-app/scripts/setup.sh
+
+    - name: Deploy Laravel application
+      run: |
+        chmod +x gab-app/scripts/deploy-laravel.sh
+        ./gab-app/scripts/deploy-laravel.sh
