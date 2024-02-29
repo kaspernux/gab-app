@@ -29,7 +29,7 @@ To get started with Gab App, follow these steps:
 3. Run the setup script:
 
    ```bash
-   sh gab-app/setup.sh
+   sudo ./install.sh
    ```
 
 5. After the installation, you can access the admin panel at:
