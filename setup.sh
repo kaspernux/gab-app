@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set permissions
-chmod +x *.sh
+chmod +x gab-app/scripts/*.sh
 
 # Install LEMP stack
 sudo apt update
@@ -29,7 +29,7 @@ sudo systemctl enable php"${PHP_VERSION}"-fpm
 sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
 
 # Configure Nginx
-sudo cp configurations/nginx/default.conf /etc/nginx/sites-available/default
+sudo cp gab-app/configurations/nginx/default.conf /etc/nginx/sites-available/default
 sudo nginx -t
 sudo systemctl reload nginx
 
@@ -37,10 +37,10 @@ sudo systemctl reload nginx
 sudo mysql_secure_installation
 
 # Create MySQL database and user for Laravel
-MYSQL_ROOT_PASSWORD="your_mysql_root_password"
-MYSQL_LARAVEL_DB="laravel_db"
-MYSQL_LARAVEL_USER="laravel_user"
-MYSQL_LARAVEL_PASSWORD="laravel_password"
+MYSQL_ROOT_PASSWORD="root"
+MYSQL_LARAVEL_DB="gab_app"
+MYSQL_LARAVEL_USER="root"
+MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
 
 sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<MYSQL_SCRIPT
 CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
@@ -50,12 +50,28 @@ FLUSH PRIVILEGES;
 MYSQL_SCRIPT
 
 # Update Laravel application's .env file with MySQL database configuration
-sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /path/to/your/laravel/project/.env.example
-sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /path/to/your/laravel/project/.env.example
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /path/to/your/laravel/project/.env.example
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/samples/laravel-app/.env.example
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/samples/laravel-app/.env.example
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/samples/laravel-app/.env.example
+
+# Set the application key
+cd gab-app/samples/laravel-app
+php artisan key:generate
+
+# Clear configuration cache
+php artisan config:cache
 
 # Restart PHP-FPM
 sudo systemctl restart php"${PHP_VERSION}"-fpm
+
+# Deploy Laravel application
+gab-app/scripts/deploy-laravel.sh
+
+# Install Composer dependencies
+composer install --no-dev
+
+# Hash the Laravel password
+php artisan migrate --seed
 
 # Obtain SSL certificate
 sudo certbot --nginx
