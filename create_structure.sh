@@ -1,34 +1,32 @@
-#!/bin/bash
+name: Build and Deploy
 
-# Create main directory
-mkdir -p gab-app/{scripts,configurations/{nginx,mysql,php,laravel},docs,samples/laravel-app,tests/integration,docker,ansible,.github/workflows}
+on:
+  push:
+    branches:
+      - main
 
-# Create script files
-touch gab-app/scripts/{install-lemp.sh,configure-nginx.sh,configure-mysql.sh,configure-php.sh,setup-security.sh,deploy-laravel.sh}
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-# Create configuration files
-touch gab-app/configurations/nginx/default.conf
-touch gab-app/configurations/mysql/my.cnf
-touch gab-app/configurations/php/php.ini
-touch gab-app/configurations/laravel/.env.example
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-# Create documentation files
-touch gab-app/docs/{installation-guide.md,configuration-guide.md,security-guide.md,usage-guide.md}
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
 
-# Create sample files
-touch gab-app/samples/laravel-app/{.env.example,artisan,composer.json,package.json,server.php}
-mkdir -p gab-app/samples/laravel-app/{app,config,database,public,resources,routes,tests}
+    - name: Install dependencies
+      run: npm install
 
-# Create test files
-touch gab-app/tests/integration/laravel-tests.sh
+    - name: Create project structure
+      run: |
+        chmod +x gab-app/scripts/create_structure.sh
+        ./gab-app/scripts/create_structure.sh
 
-# Create Docker files
-touch gab-app/docker/{Dockerfile,docker-compose.yml}
-
-# Create Ansible files
-touch gab-app/ansible/{playbook.yml,inventory}
-
-# Create other files
-touch gab-app/{Vagrantfile,.github/workflows/ci-cd.yml,LICENSE,README.md,.gitignore}
-
-echo "Directory structure and files created successfully."
+    - name: Run setup script
+      run: |
+        chmod +x gab-app/scripts/setup.sh
+        ./gab-app/scripts/setup.sh
