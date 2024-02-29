@@ -15,7 +15,7 @@ sudo apt update
 sudo apt install php php-fpm php-mysql php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl certbot python3-certbot-nginx -y
 
 # Get the installed PHP version
-PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;');
 
 # Start and enable services
 sudo systemctl start nginx
@@ -36,14 +36,23 @@ sudo systemctl reload nginx
 # Secure MySQL installation
 sudo mysql_secure_installation
 
-# Backup php.ini
-sudo cp /etc/php/"${PHP_VERSION}"/fpm/php.ini /etc/php/"${PHP_VERSION}"/fpm/php.ini.bak
+# Create MySQL database and user for Laravel
+MYSQL_ROOT_PASSWORD="your_mysql_root_password"
+MYSQL_LARAVEL_DB="laravel_db"
+MYSQL_LARAVEL_USER="laravel_user"
+MYSQL_LARAVEL_PASSWORD="laravel_password"
 
-# Update php.ini settings
-sudo sed -i 's/memory_limit = .*/memory_limit = 256M/' /etc/php/"${PHP_VERSION}"/fpm/php.ini
-sudo sed -i 's/upload_max_filesize = .*/upload_max_filesize = 100M/' /etc/php/"${PHP_VERSION}"/fpm/php.ini
-sudo sed -i 's/post_max_size = .*/post_max_size = 100M/' /etc/php/"${PHP_VERSION}"/fpm/php.ini
-sudo sed -i 's/max_execution_time = .*/max_execution_time = 300/' /etc/php/"${PHP_VERSION}"/fpm/php.ini
+sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<MYSQL_SCRIPT
+CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
+CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+MYSQL_SCRIPT
+
+# Update Laravel application's .env file with MySQL database configuration
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /path/to/your/laravel/project/.env.example
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /path/to/your/laravel/project/.env.example
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /path/to/your/laravel/project/.env.example
 
 # Restart PHP-FPM
 sudo systemctl restart php"${PHP_VERSION}"-fpm
