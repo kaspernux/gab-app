@@ -1,12 +1,14 @@
 <p align="center">
-  <a href="https://github.com/kaspernux/proxygram-bot" target="_blank" rel="noopener noreferrer">
+  <a href="https://github.com/kaspernux/gab-app" target="_blank" rel="noopener noreferrer">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/kaspernux/proxygram-bot/blob/main/assets/logo.png?raw=true">
       <img width="200" height="200" src="https://github.com/kaspernux/proxygram-bot/blob/main/assets/logo.png?raw=true">
     </picture>
   </a>
 </p> 
-
+<p align="center">
+Welcome to GAB APP ! This is a Laravel-based e-commerce application built to simplify online shopping experiences. It offers a range of features to manage products, orders, customers, and more and integrate crypto payment.
+</p>
 <p align="center">
 	<a href="./README.md">
 	English
@@ -18,14 +20,10 @@
 
 </p>
 
-<h1 align="center"/>Hi, It's Grambot by Proxygram</h1>
+<h1 align="center"/>GAB APP | The New e-commerce Generation</h1>
 
 <p align="center">
-Easy to sell with <a href="https://github.com/kaspernux/proxygram-bot">proxygram-bot</a> Easy install with few clicks
-</p>
-
-<p align="center">
-Welcome to GAB APP ! This is a Laravel-based e-commerce application built to simplify online shopping experiences. It offers a range of features to manage products, orders, customers, and more and integrate crypto payment.
+Easy to sell with <a href="https://github.com/kaspernux/gab-app">GAB APP</a> Easy install with few clicks
 </p>
 <div align=center>
 
