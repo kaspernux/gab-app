@@ -276,26 +276,19 @@ docker compose down -v
 docker compose build && docker compose up -d
 
 # Container ID by image name
-nginx_container_id=$(docker ps -aqf "name=${NGINX_CONTAINER_NAME}")
-db_container_id=$(docker ps -aqf "name=${DB_CONTAINER_NAME}")
+nginx_container_id=$(docker ps -aqf "name=gab-nginx")
+db_container_id=$(docker ps -aqf "name=gab-mysql")
 
-# Checking connection
-echo -e "${yellow} Please wait... Waiting for MySQL connection...${plain}"
-while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" >/dev/null 2>&1; do
+# Check MySQL connection
+echo "Please wait... Waiting for MySQL connection..."
+while ! docker exec ${db_container_id} mysqladmin ping -uroot -proot --silent; do
     sleep 1
 done
 
 # Creating empty database for Gabapp
 echo -e "${yellow} Creating empty database for Gabapp...${plain}"
-while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
-    sleep 1
-done
-
-# Creating empty database for Gabapp testing
-echo -e "${yellow} Creating empty database for Gabapp testing...${plain}"
-while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_TESTING_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
-    sleep 1
-done
+docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # Setting up Gabapp
 echo -e "${yellow} Now, setting up GAB APP...${plain}"
@@ -303,18 +296,18 @@ docker exec ${nginx_container_id} git clone https://github.com/bagisto/bagisto /
 
 # Setting Gabapp stable version
 echo -e "${yellow} Now, setting up GABAPP stable version...${plain}"
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
+docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout $(git describe --tags $(git rev-list --tags --max-count=1))"
 
-# Installing Composer dependencies inside container
+# Install composer dependencies inside the container
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && composer install --no-dev"
 
 # Generate application key and capture the output
 app_key=$(docker exec ${nginx_container_id} php artisan key:generate | grep "Your application key is" | awk '{print $5}')
 
 # Replace placeholder with the generated APP_KEY in .env file
-sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" .configs/.env
+sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" ./.env
 
-# Moving `.env` file
+# Copy `.env` files to the container
 docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
 docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
@@ -324,9 +317,9 @@ docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/ww
 # Settiing permissions
 docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
 
-# Executing final commands
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
-
+# Execute final commands for setup
+docker exec ${apache_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
+                     
 # Just to be sure that no traces left
 docker-compose down -v
 
