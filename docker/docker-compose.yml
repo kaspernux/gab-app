@@ -1,0 +1,84 @@
+version: "3.1"
+
+services:
+  gab-php-fpm:
+    build:
+      args:
+        container_project_path: /var/www/html/
+        uid: 1000
+        user: $USER
+      context: .
+      dockerfile: ./Dockerfile
+    image: gab-php-fpm
+    ports:
+      - 9000:9000
+    volumes:
+      - ./gab-app:/var/www/html
+
+  gab-mysql:
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 3306:3306
+    volumes:
+      - ./gab-configs/mysql-data:/var/lib/mysql
+
+  gab-redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - ./gab-configs/redis-data:/data
+
+  gab-phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    environment:
+      PMA_HOST: gab-mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+      UPLOAD_LIMIT: 512M
+    ports:
+      - 8080:80
+
+  gab-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:latest
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - ./gab-configs/elasticsearch-data:/var/lib/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  gab-kibana:
+    image: docker.elastic.co/kibana/kibana:latest
+    environment:
+      - ELASTICSEARCH_HOSTS=http://gab-elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - gab-elasticsearch
+
+  gab-mailhog:
+    image: mailhog/mailhog:latest
+    logging:
+      # Disable saving logs.
+      driver: 'none'
+    ports:
+      # SMTP server.
+      - 1025:1025
+      - 8025:8025

@@ -1,10 +1,31 @@
 #!/bin/bash
 
+# Install Docker
+sudo apt update
+sudo apt install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo \
+  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
 # Set permissions
 chmod +x gab-app/scripts/*.sh
 
 # Install LEMP stack
-sudo apt update
 sudo apt install nginx mysql-server software-properties-common -y
 
 # Add repository for latest PHP version
@@ -79,9 +100,6 @@ php artisan config:cache
 
 # Restart PHP-FPM
 sudo systemctl restart php"${PHP_VERSION}"-fpm
-
-# Deploy Laravel application
-gab-app/scripts/deploy-laravel.sh
 
 # Install Composer dependencies
 composer install --no-dev
