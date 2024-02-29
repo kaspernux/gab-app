@@ -1,7 +1,7 @@
 version: "3.1"
 
 services:
-  gab-php-fpm:
+ gab-nginx:
     build:
       args:
         container_project_path: /var/www/html/
@@ -9,12 +9,13 @@ services:
         user: $USER
       context: .
       dockerfile: ./Dockerfile
-    image: gab-php-fpm
+    image: nginx
     ports:
-      - 9000:9000
+      - 80:80
     volumes:
-      - ./gab-app:/var/www/html
-
+      - ./gab-configs/nginx-data:/var/www/html
+    restart: unless-stopped
+    
   gab-mysql:
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
@@ -25,7 +26,8 @@ services:
       - 3306:3306
     volumes:
       - ./gab-configs/mysql-data:/var/lib/mysql
-
+    restart: unless-stopped
+    
   gab-redis:
     image: redis:latest
     ports:
@@ -33,7 +35,8 @@ services:
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - ./gab-configs/redis-data:/data
-
+    restart: unless-stopped
+    
   gab-phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     environment:
@@ -43,7 +46,8 @@ services:
       UPLOAD_LIMIT: 512M
     ports:
       - 8080:80
-
+    restart: unless-stopped
+    
   gab-elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:latest
     environment:
@@ -63,7 +67,8 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
-
+    restart: unless-stopped
+    
   gab-kibana:
     image: docker.elastic.co/kibana/kibana:latest
     environment:
@@ -72,7 +77,8 @@ services:
       - 5601:5601
     depends_on:
       - gab-elasticsearch
-
+    restart: unless-stopped
+    
   gab-mailhog:
     image: mailhog/mailhog:latest
     logging:
@@ -82,3 +88,4 @@ services:
       # SMTP server.
       - 1025:1025
       - 8025:8025
+    restart: unless-stopped
