@@ -85,4 +85,41 @@ sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
 sudo ufw enable
 
+# Navigate to gab-app directory for Bagisto deployment
+cd ..
+
+# Download Bagisto project using Composer
+composer create-project bagisto/bagisto gab-app
+
+# Navigate to the Bagisto directory
+cd gab-app
+
+# Copy the .env.example file to .env
+cp .env.example .env
+
+# Set the environment variables in the .env file
+# You may need to replace these values with your actual database and email credentials
+sed -i "s/APP_URL=.*/APP_URL=http:\/\/example.com/" .env
+sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env
+sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=gab_app/" .env
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+
+# Generate the application key
+php artisan key:generate
+
+# Run database migrations
+php artisan migrate
+
+# Seed the database with default data
+php artisan db:seed
+
+# Publish configuration and assets
+php artisan vendor:publish
+
+# Create a symbolic link for the storage directory
+php artisan storage:link
+
 echo "Setup completed successfully!"
