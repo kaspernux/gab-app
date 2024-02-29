@@ -17,6 +17,18 @@ sudo apt install php php-fpm php-mysql php-common php-mbstring php-xmlrpc php-so
 # Get the installed PHP version
 PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;');
 
+# Retrieve server timezone
+SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
+
+# Replace placeholder with server timezone in PHP configuration
+sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/configurations/php/php.ini
+
+# Extract PHP version
+PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;');
+
+# Replace placeholder with actual PHP version in Nginx configuration
+sed -i "s|fastcgi_pass unix:/var/run/php/php[0-9].[0-9]-fpm.sock;|fastcgi_pass unix:/var/run/php/php${PHP_VERSION}-fpm.sock;|" gab-app/configurations/nginx/default.conf
+
 # Start and enable services
 sudo systemctl start nginx
 sudo systemctl enable nginx
