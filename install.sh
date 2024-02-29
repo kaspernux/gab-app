@@ -15,6 +15,85 @@ $$ |  $$ |$$ |  $$ |$$ |  $$ |      $$ |  $$ |$$ |      $$ |
                                                                   
 \e[0m"
 
+red='\033[0;31m'
+green='\033[0;32m'
+yellow='\033[0;33m'
+plain='\033[0m'
+
+cur_dir=$(pwd)
+
+# check root
+[[ $EUID -ne 0 ]] && echo -e "${red}Fatal error: ${plain} Please run this script with root privilege \n " && exit 1
+
+# Check OS and set release variable
+if [[ -f /etc/os-release ]]; then
+    source /etc/os-release
+    release=$ID
+elif [[ -f /usr/lib/os-release ]]; then
+    source /usr/lib/os-release
+    release=$ID
+else
+    echo "Failed to check the system OS, please contact the author!" >&2
+    exit 1
+fi
+echo "The OS release is: $release"
+
+arch3xui() {
+    case "$(uname -m)" in
+    x86_64 | x64 | amd64) echo 'amd64' ;;
+    i*86 | x86) echo '386' ;;
+    armv8* | armv8 | arm64 | aarch64) echo 'arm64' ;;
+    armv7* | armv7 | arm) echo 'armv7' ;;
+    armv6* | armv6) echo 'armv6' ;;
+    armv5* | armv5) echo 'armv5' ;;
+    *) echo -e "${green}Unsupported CPU architecture! ${plain}" && rm -f install.sh && exit 1 ;;
+    esac
+}
+
+echo "arch: $(arch3xui)"
+
+os_version=""
+os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
+
+if [[ "${release}" == "centos" ]]; then
+    if [[ ${os_version} -lt 8 ]]; then
+        echo -e "${red} Please use CentOS 8 or higher ${plain}\n" && exit 1
+    fi
+elif [[ "${release}" == "ubuntu" ]]; then
+    if [[ ${os_version} -lt 20 ]]; then
+        echo -e "${red} Please use Ubuntu 20 or higher version!${plain}\n" && exit 1
+    fi
+
+elif [[ "${release}" == "fedora" ]]; then
+    if [[ ${os_version} -lt 36 ]]; then
+        echo -e "${red} Please use Fedora 36 or higher version!${plain}\n" && exit 1
+    fi
+
+elif [[ "${release}" == "debian" ]]; then
+    if [[ ${os_version} -lt 11 ]]; then
+        echo -e "${red} Please use Debian 11 or higher ${plain}\n" && exit 1
+    fi
+
+elif [[ "${release}" == "almalinux" ]]; then
+    if [[ ${os_version} -lt 9 ]]; then
+        echo -e "${red} Please use AlmaLinux 9 or higher ${plain}\n" && exit 1
+    fi
+
+elif [[ "${release}" == "rocky" ]]; then
+    if [[ ${os_version} -lt 9 ]]; then
+        echo -e "${red} Please use RockyLinux 9 or higher ${plain}\n" && exit 1
+    fi
+elif [[ "${release}" == "arch" ]]; then
+    echo "Your OS is ArchLinux"
+elif [[ "${release}" == "manjaro" ]]; then
+    echo "Your OS is Manjaro"
+elif [[ "${release}" == "armbian" ]]; then
+    echo "Your OS is Armbian"
+
+else
+    echo -e "${red}Failed to check the OS version, please contact the author!${plain}" && exit 1
+fi
+
 # Install LEMP stack
 sudo apt install software-properties-common -y
 
@@ -48,9 +127,9 @@ GIT_INSTALLED=$?
 
 # Check if necessary packages are installed
 if [ $DOCKER_INSTALLED -eq 0 ]; then
-    echo "Docker is already installed. Skipping installation."
+    echo -e "${red}Docker is already installed. Skipping installation."
 else
-    echo "Installing Docker..."
+    echo -e "${green}Installing Docker..."
     # Install Docker
     sudo apt update
     sudo apt install -y \
@@ -76,9 +155,9 @@ else
 fi
 
 if [ $NGINX_INSTALLED -eq 0 ]; then
-    echo "Nginx is already installed. Skipping installation."
+    echo -e "${red} Nginx is already installed. Skipping installation."
 else
-    echo "Installing Nginx..."
+    echo -e "${green} Installing Nginx..."
     # Install Nginx
     sudo apt install nginx certbot python3-certbot-nginx -y
     # Backup the default Nginx configuration
@@ -92,9 +171,9 @@ fi
 
 
 if [ $MYSQL_INSTALLED -eq 0 ]; then
-    echo "MySQL Server is already installed. Skipping installation."
+    echo -e "${red} MySQL Server is already installed. Skipping installation."
 else
-    echo "Installing MySQL Server..."
+    echo -e "${green} Installing MySQL Server..."
     # Install MySQL
     sudo apt install mysql-server -y
     sudo mysql_secure_installation
@@ -120,18 +199,18 @@ sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env.ex
 
 
 if [ $NODE_INSTALLED -eq 0 ]; then
-    echo "Node.js is already installed. Skipping installation."
+    echo -e "${red} Node.js is already installed. Skipping installation."
 else
-    echo "Installing Node.js ..."
+    echo -e "${red} Installing Node.js ..."
     # Install Node.js
     sudo apt-get update
     sudo apt-get install -y nodejs
 fi
 
 if [ $PHP_INSTALLED -eq 0 ]; then
-    echo "PHP latest version is already installed. Skipping installation."
+    echo -e "${red} PHP latest version is already installed. Skipping installation."
 else
-    echo "Installing PHP Latest version ..."
+    echo -e "${green} Installing PHP Latest version ..."
     # Add repository for latest PHP version
     sudo add-apt-repository ppa:ondrej/php -y
     sudo apt update
@@ -145,6 +224,8 @@ else
     # Replace placeholder with server timezone in PHP configuration
     sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/configurations/php/php.ini
 fi
+
+echo -e "${green} Starting all the services on your server..."
 
 # Start and enable services
 sudo systemctl start nginx
@@ -179,29 +260,29 @@ nginx_container_id=$(docker ps -aqf "name=${NGINX_CONTAINER_NAME}")
 db_container_id=$(docker ps -aqf "name=${DB_CONTAINER_NAME}")
 
 # Checking connection
-echo "Please wait... Waiting for MySQL connection..."
+echo -e "${yellow} Please wait... Waiting for MySQL connection..."
 while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" >/dev/null 2>&1; do
     sleep 1
 done
 
 # Creating empty database for Gabapp
-echo "Creating empty database for Gabapp..."
+echo -e "${yellow} Creating empty database for Gabapp..."
 while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
     sleep 1
 done
 
 # Creating empty database for Gabapp testing
-echo "Creating empty database for Gabapp testing..."
+echo -e "${yellow} Creating empty database for Gabapp testing..."
 while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_TESTING_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
     sleep 1
 done
 
 # Setting up Gabapp
-echo "Now, setting up Gabapp..."
+echo -e "${yellow} Now, setting up GAB APP..."
 docker exec ${nginx_container_id} git clone https://github.com/bagisto/bagisto /var/www/html/gab-app
 
 # Setting Gabapp stable version
-echo "Now, setting up Gabapp stable version..."
+echo -e "${yellow} Now, setting up GABAPP stable version..."
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
 
 # Installing Composer dependencies inside container
@@ -232,7 +313,8 @@ docker-compose down -v
 # Building and running docker-compose file
 docker-compose build && docker-compose up -d
 
-echo "Setup completed successfully! The GAB APP has been installed
+echo -e "${green} Setup completed successfully! The GAB APP has been installed"
+echo -e"${yellow}
  You can access the admin panel at:
 
    [http://your_domain.com/admin/login](http://localhost/admin/login)
