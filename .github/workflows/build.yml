@@ -21,5 +21,12 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run script
-      run: ./create_structure.sh
+    - name: Create project structure
+      run: |
+        chmod +x gab-app/scripts/create_structure.sh
+        ./gab-app/scripts/create_structure.sh
+
+    - name: Run setup script
+      run: |
+        chmod +x gab-app/scripts/setup.sh
+        ./gab-app/scripts/setup.sh
