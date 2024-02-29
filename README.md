@@ -34,14 +34,14 @@ To get started with Gab App, follow these steps:
 
 5. After the installation, you can access the admin panel at:
 
-   [http://your_server_endpoint/admin/login](http://your_server_endpoint/admin/login)
+   [http://localhost/admin/login](http://localhost/admin/login)
 
    - Email: admin@example.com
    - Password: admin123
 
    To log in as a customer, you can directly register as a customer and then login at:
 
-   [http://your_server_endpoint/customer/register](http://your_server_endpoint/customer/register)
+   [http://localhost/customer/register](http://localhost/customer/register)
 
 ## System Requirements
 

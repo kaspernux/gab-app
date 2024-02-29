@@ -35,8 +35,9 @@ sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io
 
 # Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+mkdir -p ~/.docker/cli-plugins/
+curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+chmod +x ~/.docker/cli-plugins/docker-compose
 
 # Set permissions
 chmod +x gab-app/scripts/*.sh
@@ -113,10 +114,10 @@ APP_DIR="gab-app"
 cd "$APP_DIR" || exit
 
 # Just to be sure that no traces left
-docker-compose down -v
+docker compose down -v
 
-# Building and running docker-compose file
-docker-compose build && docker-compose up -d
+# Building and running docker compose file
+docker compose build && docker compose up -d
 
 # Container ID by image name
 nginx_container_id=$(docker ps -aqf "name=${NGINX_CONTAINER_NAME}")
@@ -171,6 +172,6 @@ docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php ar
 docker-compose down -v
 
 # Building and running docker-compose file
-docker-compose build && docker-compose up -d
+docker compose build && docker compose up -d
 
 echo "Setup completed successfully!"
