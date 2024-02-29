@@ -14,12 +14,17 @@ RUN apt-get update && apt-get install -y \
     libxpm-dev \
     libzip-dev \
     unzip \
-    zlib1g-dev
+    zlib1g-dev \
+    nginx
 
-# Run setup script to install Docker and Docker Compose
-COPY setup.sh /tmp/setup.sh
-RUN chmod +x /tmp/setup.sh
-RUN /tmp/setup.sh
+# Stop any service using ports 80 and 443
+RUN service nginx stop || true
+
+# installing nginx
+RUN apt-get install -y nginx
+
+# Expose ports 80 and 443
+EXPOSE 80 443
 
 # configuring php extension
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
@@ -63,4 +68,3 @@ COPY . .
 
 # changing user
 USER $user
-
