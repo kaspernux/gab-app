@@ -165,10 +165,11 @@ else
 
 fi
 
-# Function to fetch .env file from GitHub repository
+# Function to fetch .env file from GitHub repository and copy into gab-app/.configs/php/php.ini and .configs/.env
 fetch_env_file() {
     local repo_url="https://raw.githubusercontent.com/kaspernux/gab-app/main/.env"
-    curl -sSf "$repo_url" > .env
+    curl -sSf "$repo_url" > gab-app/.configs/.env
+    cp gab-app/.configs/.env gab-app/.configs/php/php.ini
 }
 
 # Fetch .env file from GitHub repository
