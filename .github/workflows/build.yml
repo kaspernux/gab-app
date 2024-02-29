@@ -18,17 +18,12 @@ jobs:
       with:
         node-version: 'lts' # This will use the latest LTS version of Node.js
 
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Create project structure
-      run: |
-        chmod +x gab-app/scripts/create_structure.sh
-        ./gab-app/scripts/create_structure.sh
-
-    - name: Run setup script
+    - name: Set permissions and run install script
       run: |
         chmod +x gab-app/scripts/install.sh
         ./gab-app/scripts/install.sh
-    
+
+    - name: Build and run Docker containers
+      run: |
+        cd gab-app
+        docker-compose build && docker-compose up -d
