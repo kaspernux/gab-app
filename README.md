@@ -1,4 +1,4 @@
-Certainly! Here's the Markdown code for the README.md:
+You can add the additional installation steps and system requirements information to your README.md as follows:
 
 ```markdown
 # Gab App
@@ -23,39 +23,37 @@ To get started with Gab App, follow these steps:
    git clone https://github.com/kaspernux/gab-app.git
    ```
 
-2. Install dependencies:
+2. Set permissions:
 
    ```bash
-   cd gab-app
-   composer install
-   npm install
+   cd gab-app && chmod +x gab-app/install.sh
    ```
 
-3. Copy the `.env.example` file to `.env` and configure it with your environment settings:
+3. Adjust your Apache, MySQL, and PHPMyAdmin port by modifying the docker-compose.yml file.
+
+4. Run the setup script:
 
    ```bash
-   cp .env.example .env
+   sh gab-app/setup.sh
    ```
 
-4. Generate an application key:
+5. After the installation, you can access the admin panel at:
 
-   ```bash
-   php artisan key:generate
-   ```
+   [http://your_server_endpoint/admin/login](http://your_server_endpoint/admin/login)
 
-5. Run database migrations and seeders:
+   - Email: admin@example.com
+   - Password: admin123
 
-   ```bash
-   php artisan migrate --seed
-   ```
+   To log in as a customer, you can directly register as a customer and then login at:
 
-6. Start the development server:
+   [http://your_server_endpoint/customer/register](http://your_server_endpoint/customer/register)
 
-   ```bash
-   php artisan serve
-   ```
+## System Requirements
 
-7. Visit `http://localhost:8000` in your web browser to access Gab App.
+The system/server requirements for Gab App are fulfilled by Docker containers. Make sure you have the latest version of Docker and Docker Compose installed. Docker supports Linux, MacOS, and Windows Operating System. You can find their installation guides here:
+
+- [Docker Installation Guide](https://docs.docker.com/get-docker/)
+- [Docker Compose Installation Guide](https://docs.docker.com/compose/install/)
 
 ## Contributing
 
@@ -72,4 +70,4 @@ Contributions are welcome! If you'd like to contribute to Gab App, please follow
 This project is licensed under the [MIT License](LICENSE).
 ```
 
-You can copy and paste this code into your README.md file in your Gab App repository. Feel free to modify it as needed!
+You can replace "your_server_endpoint" with the actual URL where your application will be hosted. Make sure to replace placeholders like email and password with the actual credentials used in your application.
