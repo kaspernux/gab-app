@@ -26,4 +26,4 @@ jobs:
     - name: Build and run Docker containers
       run: |
         cd gab-app
-        docker-compose build && docker-compose up -d
+        docker compose build && docker compose up -d

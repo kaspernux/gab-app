@@ -1,6 +1,45 @@
-# Gab App
+<p align="center">
+  <a href="https://github.com/kaspernux/gab-app" target="_blank" rel="noopener noreferrer">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/kaspernux/proxygram-bot/blob/main/assets/logo.png?raw=true">
+      <img width="200" height="200" src="https://github.com/kaspernux/proxygram-bot/blob/main/assets/logo.png?raw=true">
+    </picture>
+  </a>
+</p> 
+<p align="center">
+Welcome to GAB APP ! This is a Laravel-based e-commerce application built to simplify online shopping experiences. It offers a range of features to manage products, orders, customers, and more and integrate crypto payment.
+</p>
+<p align="center">
+	<a href="./README.md">
+	English
+	</a>
+	/
+	<a href="./README-RU.md">
+	RU
+	</a>
 
-Welcome to Gab App! This is a Laravel-based e-commerce application built to simplify online shopping experiences. It offers a range of features to manage products, orders, customers, and more.
+</p>
+
+<h1 align="center"/>GAB APP | The New e-commerce Generation</h1>
+
+<p align="center">
+Easy to sell with <a href="https://github.com/kaspernux/gab-app">GAB APP</a> Easy install with few clicks
+</p>
+<div align=center>
+
+<img src="https://img.shields.io/github/license/wizwizdev/wizwizxui-timebot?style=flat-square" />
+<img src="https://img.shields.io/github/v/release/wizwizdev/wizwizxui-timebot.svg" />
+<!-- <img src="https://visitor-badge.glitch.me/badge?page_id=wizwizdev.wizwizdev" />
+ -->
+</div>
+
+<br>
+<br>
+    <a align="center">
+        <img src="https://github.com/kaspernux/proxygram-bot/assets/27927279/f6635ea5-ab26-4c64-a7b8-952203f79763" />
+    </a>     
+<br>
+<br>
 
 ## Features
 
@@ -17,7 +56,7 @@ To get started with Gab App, follow these steps:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/kaspernux/gab-app.git
+   bash <(curl -Ls h[ttps://raw.githubusercontent.com/kaspernux/gab-app/main/install.sh](https://raw.githubusercontent.com/kaspernux/gab-app/main/install.sh?token=GHSAT0AAAAAACO4UFBM4X54IDXCBNTTMYHOZPATK3Q))
    ```
 
 2. Set permissions:
