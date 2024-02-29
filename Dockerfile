@@ -1,5 +1,5 @@
 # main image
-FROM php:8.1-apache
+FROM php:8.3-apache
 
 # installing dependencies
 RUN apt-get update && apt-get install -y \
@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y \
     libxpm-dev \
     libzip-dev \
     unzip \
-    zlib1g-dev
+    zlib1g-dev \
+    certbot \
+    letsencrypt
 
 # configuring php extension
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp
@@ -43,9 +45,11 @@ ARG user
 # setting work directory
 WORKDIR $container_project_path
 
-# adding user
-RUN useradd -G www-data,root -u $uid -d /home/$user $user
-RUN mkdir -p /home/$user/.composer && \
+# Check if the user exists, retrieve their info, and if not, create the user
+RUN if ! id -u $user > /dev/null 2>&1; then \
+        useradd -G www-data,root -u $uid -d /home/$user $user; \
+    fi && \
+    mkdir -p /home/$user/.composer && \
     chown -R $user:$user /home/$user
 
 # setting apache
