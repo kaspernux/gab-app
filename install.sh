@@ -162,7 +162,10 @@ docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
 docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
 # Update the .env file inside the container
-docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
+docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example &&"
+
+# Settiing permissions
+docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $user:$user /var/www/html/storage/logs/"
 
 # Executing final commands
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
@@ -173,4 +176,14 @@ docker-compose down -v
 # Building and running docker-compose file
 docker-compose build && docker-compose up -d
 
-echo "Setup completed successfully!"
+echo "Setup completed successfully! The GAB APP has been installed
+ You can access the admin panel at:
+
+   [http://your_domain.com/admin/login](http://localhost/admin/login)
+
+   - Email: admin@example.com
+   - Password: admin123
+
+   To log in as a customer, you can directly register as a customer and then login at:
+
+   [http://your_domain.com/customer/register](http://localhostt/customer/register)"
