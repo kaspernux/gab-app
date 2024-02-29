@@ -1,45 +1,38 @@
-# just to be sure that no traces left
+# Stop and remove existing containers along with volumes
 docker compose down -v
 
-# building and running docker compose file
-docker compose build && docker compose up -d
+# Build and run the Docker Compose file
+docker compose up -d --build
 
-# container id by image name
-apache_container_id=$(docker ps -aqf "name=bagisto-php-apache")
-db_container_id=$(docker ps -aqf "name=bagisto-mysql")
+# Retrieve container IDs by image name
+apache_container_id=$(docker ps -qf "name=bagisto-php-apache")
+db_container_id=$(docker ps -qf "name=bagisto-mysql")
 
-# checking connection
+# Check MySQL connection
 echo "Please wait... Waiting for MySQL connection..."
-while ! docker exec ${db_container_id} mysql --user=root --password=root -e "SELECT 1" >/dev/null 2>&1; do
+while ! docker exec ${db_container_id} mysqladmin ping -uroot -proot --silent; do
     sleep 1
 done
 
-# creating empty database for bagisto
-echo "Creating empty database for bagisto..."
-while ! docker exec ${db_container_id} mysql --user=root --password=root -e "CREATE DATABASE bagisto CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
-    sleep 1
-done
+# Create empty databases for Bagisto and testing
+echo "Creating empty databases for Bagisto..."
+docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS bagisto CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS bagisto_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# creating empty database for bagisto testing
-echo "Creating empty database for bagisto testing..."
-while ! docker exec ${db_container_id} mysql --user=root --password=root -e "CREATE DATABASE bagisto_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
-    sleep 1
-done
-
-# setting up bagisto
-echo "Now, setting up Bagisto..."
+# Set up Bagisto
+echo "Setting up Bagisto..."
 docker exec ${apache_container_id} git clone https://github.com/bagisto/bagisto
 
-# setting bagisto stable version
-echo "Now, setting up Bagisto stable version..."
-docker exec -i ${apache_container_id} bash -c "cd bagisto && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
+# Set Bagisto stable version
+echo "Setting up Bagisto stable version..."
+docker exec ${apache_container_id} bash -c "cd bagisto && git fetch --tags && git checkout $(git describe --tags $(git rev-list --tags --max-count=1))"
 
-# installing composer dependencies inside container
-docker exec -i ${apache_container_id} bash -c "cd bagisto && composer install"
+# Install composer dependencies inside the container
+docker exec ${apache_container_id} bash -c "cd bagisto && composer install"
 
-# moving `.env` file
+# Copy `.env` files to the container
 docker cp .configs/.env ${apache_container_id}:/var/www/html/bagisto/.env
 docker cp .configs/.env.testing ${apache_container_id}:/var/www/html/bagisto/.env.testing
 
-# executing final commands
-docker exec -i ${apache_container_id} bash -c "cd bagisto && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
+# Execute final commands for setup
+docker exec ${apache_container_id} bash -c "cd bagisto && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
