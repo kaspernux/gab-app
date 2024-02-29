@@ -26,9 +26,7 @@ To get started with Gab App, follow these steps:
    cd gab-app && chmod +x gab-app/install.sh
    ```
 
-3. Adjust your Apache, MySQL, and PHPMyAdmin port by modifying the docker-compose.yml file.
-
-4. Run the setup script:
+3. Run the setup script:
 
    ```bash
    sh gab-app/setup.sh
