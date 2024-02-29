@@ -16,7 +16,8 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
-        node-version: '14'
+        node-version: 'lts' # This will use the latest LTS version of Node.js
+
 
     - name: Install dependencies
       run: npm install
@@ -31,7 +32,3 @@ jobs:
         chmod +x gab-app/scripts/setup.sh
         ./gab-app/scripts/setup.sh
 
-    - name: Deploy Laravel application
-      run: |
-        chmod +x gab-app/scripts/deploy-laravel.sh
-        ./gab-app/scripts/deploy-laravel.sh
