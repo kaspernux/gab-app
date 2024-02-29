@@ -14,6 +14,10 @@ sudo apt update
 # Install the latest PHP version
 sudo apt install php php-fpm php-mysql php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl certbot python3-certbot-nginx -y
 
+# Install Node.js and npm
+curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+sudo apt install nodejs -y
+
 # Get the installed PHP version
 PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;');
 
@@ -62,12 +66,12 @@ FLUSH PRIVILEGES;
 MYSQL_SCRIPT
 
 # Update Laravel application's .env file with MySQL database configuration
-sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/samples/laravel-app/.env.example
-sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/samples/laravel-app/.env.example
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/samples/laravel-app/.env.example
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/.env.example
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/.env.example
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env.example
 
 # Set the application key
-cd gab-app/samples/laravel-app
+cd gab-app
 php artisan key:generate
 
 # Clear configuration cache
@@ -92,5 +96,42 @@ sudo certbot --nginx
 sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
 sudo ufw enable
+
+# Navigate to gab-app directory for Bagisto deployment
+cd ..
+
+# Download Bagisto project using Composer
+composer create-project bagisto/bagisto gab-app
+
+# Navigate to the Bagisto directory
+cd gab-app
+
+# Copy the .env.example file to .env
+cp .env.example .env
+
+# Set the environment variables in the .env file
+# You may need to replace these values with your actual database and email credentials
+sed -i "s/APP_URL=.*/APP_URL=http:\/\/example.com/" .env
+sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env
+sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=gab_app/" .env
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+
+# Generate the application key
+php artisan key:generate
+
+# Run database migrations
+php artisan migrate
+
+# Seed the database with default data
+php artisan db:seed
+
+# Publish configuration and assets
+php artisan vendor:publish
+
+# Create a symbolic link for the storage directory
+php artisan storage:link
 
 echo "Setup completed successfully!"
