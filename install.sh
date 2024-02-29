@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Print GAB APP ASCII art
 printf "\e[34m
@@ -22,8 +22,11 @@ plain='\033[0m'
 
 cur_dir=$(pwd)
 
-# check root
-[[ $EUID -ne 0 ]] && echo -e "${red}Fatal error: ${plain} Please run this script with root privilege \n " && exit 1
+# Check root privilege
+if [ "$(id -u)" -ne 0 ]; then
+    echo -e "${red}Fatal error: ${plain}Please run this script with root privilege\n" >&2
+    exit 1
+fi
 
 # Check OS and set release variable
 if [[ -f /etc/os-release ]]; then
@@ -55,44 +58,51 @@ echo "arch: $(arch3xui)"
 os_version=""
 os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
 
-if [[ "${release}" == "centos" ]]; then
-    if [[ ${os_version} -lt 8 ]]; then
-        echo -e "${red} Please use CentOS 8 or higher ${plain}\n" && exit 1
-    fi
-elif [[ "${release}" == "ubuntu" ]]; then
-    if [[ ${os_version} -lt 20 ]]; then
-        echo -e "${red} Please use Ubuntu 20 or higher version!${plain}\n" && exit 1
-    fi
-
-elif [[ "${release}" == "fedora" ]]; then
-    if [[ ${os_version} -lt 36 ]]; then
-        echo -e "${red} Please use Fedora 36 or higher version!${plain}\n" && exit 1
-    fi
-
-elif [[ "${release}" == "debian" ]]; then
-    if [[ ${os_version} -lt 11 ]]; then
-        echo -e "${red} Please use Debian 11 or higher ${plain}\n" && exit 1
-    fi
-
-elif [[ "${release}" == "almalinux" ]]; then
-    if [[ ${os_version} -lt 9 ]]; then
-        echo -e "${red} Please use AlmaLinux 9 or higher ${plain}\n" && exit 1
-    fi
-
-elif [[ "${release}" == "rocky" ]]; then
-    if [[ ${os_version} -lt 9 ]]; then
-        echo -e "${red} Please use RockyLinux 9 or higher ${plain}\n" && exit 1
-    fi
-elif [[ "${release}" == "arch" ]]; then
-    echo "Your OS is ArchLinux"
-elif [[ "${release}" == "manjaro" ]]; then
-    echo "Your OS is Manjaro"
-elif [[ "${release}" == "armbian" ]]; then
-    echo "Your OS is Armbian"
-
-else
-    echo -e "${red}Failed to check the OS version, please contact the author!${plain}" && exit 1
-fi
+# Check OS version
+case "${release}" in
+    centos)
+        if [[ ${os_version} -lt 8 ]]; then
+            echo -e "${red} Please use CentOS 8 or higher ${plain}\n" && exit 1
+        fi
+        ;;
+    ubuntu)
+        if [[ ${os_version} -lt 20 ]]; then
+            echo -e "${red} Please use Ubuntu 20 or higher version!${plain}\n" && exit 1
+        fi
+        ;;
+    fedora)
+        if [[ ${os_version} -lt 36 ]]; then
+            echo -e "${red} Please use Fedora 36 or higher version!${plain}\n" && exit 1
+        fi
+        ;;
+    debian)
+        if [[ ${os_version} -lt 11 ]]; then
+            echo -e "${red} Please use Debian 11 or higher ${plain}\n" && exit 1
+        fi
+        ;;
+    almalinux)
+        if [[ ${os_version} -lt 9 ]]; then
+            echo -e "${red} Please use AlmaLinux 9 or higher ${plain}\n" && exit 1
+        fi
+        ;;
+    rocky)
+        if [[ ${os_version} -lt 9 ]]; then
+            echo -e "${red} Please use RockyLinux 9 or higher ${plain}\n" && exit 1
+        fi
+        ;;
+    arch)
+        echo "Your OS is ArchLinux"
+        ;;
+    manjaro)
+        echo "Your OS is Manjaro"
+        ;;
+    armbian)
+        echo "Your OS is Armbian"
+        ;;
+    *)
+        echo -e "${red}Failed to check the OS version, please contact the author!${plain}" && exit 1
+        ;;
+esac
 
 # Install LEMP stack
 sudo apt install software-properties-common -y
@@ -133,27 +143,38 @@ else
     # Install Docker
     sudo apt update
     sudo apt install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release
 
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
     echo \
-    "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     sudo apt update
     sudo apt install -y docker-ce docker-ce-cli containerd.io
 
-# Install Docker Compose
-mkdir -p ~/.docker/cli-plugins/
-curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-chmod +x ~/.docker/cli-plugins/docker-compose
+    # Install Docker Compose
+    mkdir -p ~/.docker/cli-plugins/
+    curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+    chmod +x ~/.docker/cli-plugins/docker-compose
 
 fi
+
+# Function to fetch .env file from GitHub repository
+fetch_env_file() {
+    local repo_url="https://raw.githubusercontent.com/kaspernux/gab-app/main/.env"
+    curl -sSf "$repo_url" > .env
+}
+
+# Fetch .env file from GitHub repository
+fetch_env_file
+
+# Continue with the rest of the script...
 
 if [ $NGINX_INSTALLED -eq 0 ]; then
     echo -e "${red} Nginx is already installed. Skipping installation.${plain}"
@@ -169,7 +190,6 @@ else
     sudo nginx -t
     sudo systemctl reload nginx
 fi
-
 
 if [ $MYSQL_INSTALLED -eq 0 ]; then
     echo -e "${red} MySQL Server is already installed. Skipping installation.${plain}"
@@ -194,10 +214,9 @@ FLUSH PRIVILEGES;
 MYSQL_SCRIPT
 
 # Update Laravel application's .env file with MySQL database configuration
-sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/.env.example
-sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/.env.example
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env.example
-
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/.env
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/.env
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env
 
 if [ $NODE_INSTALLED -eq 0 ]; then
     echo -e "${red} Node.js is already installed. Skipping installation.${plain}"
@@ -257,26 +276,19 @@ docker compose down -v
 docker compose build && docker compose up -d
 
 # Container ID by image name
-nginx_container_id=$(docker ps -aqf "name=${NGINX_CONTAINER_NAME}")
-db_container_id=$(docker ps -aqf "name=${DB_CONTAINER_NAME}")
+nginx_container_id=$(docker ps -aqf "name=gab-nginx")
+db_container_id=$(docker ps -aqf "name=gab-mysql")
 
-# Checking connection
-echo -e "${yellow} Please wait... Waiting for MySQL connection...${plain}"
-while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" >/dev/null 2>&1; do
+# Check MySQL connection
+echo "Please wait... Waiting for MySQL connection..."
+while ! docker exec ${db_container_id} mysqladmin ping -uroot -proot --silent; do
     sleep 1
 done
 
 # Creating empty database for Gabapp
 echo -e "${yellow} Creating empty database for Gabapp...${plain}"
-while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
-    sleep 1
-done
-
-# Creating empty database for Gabapp testing
-echo -e "${yellow} Creating empty database for Gabapp testing...${plain}"
-while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_TESTING_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
-    sleep 1
-done
+docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # Setting up Gabapp
 echo -e "${yellow} Now, setting up GAB APP...${plain}"
@@ -284,18 +296,18 @@ docker exec ${nginx_container_id} git clone https://github.com/bagisto/bagisto /
 
 # Setting Gabapp stable version
 echo -e "${yellow} Now, setting up GABAPP stable version...${plain}"
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
+docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout $(git describe --tags $(git rev-list --tags --max-count=1))"
 
-# Installing Composer dependencies inside container
+# Install composer dependencies inside the container
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && composer install --no-dev"
 
 # Generate application key and capture the output
 app_key=$(docker exec ${nginx_container_id} php artisan key:generate | grep "Your application key is" | awk '{print $5}')
 
 # Replace placeholder with the generated APP_KEY in .env file
-sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" .configs/.env
+sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" ./.env
 
-# Moving `.env` file
+# Copy `.env` files to the container
 docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
 docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
@@ -305,9 +317,9 @@ docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/ww
 # Settiing permissions
 docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
 
-# Executing final commands
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
-
+# Execute final commands for setup
+docker exec ${apache_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
+                     
 # Just to be sure that no traces left
 docker-compose down -v
 
@@ -316,13 +328,14 @@ docker compose build && docker compose up -d
 
 echo -e "${yellow} Setup completed successfully! The GAB APP has been installed${plain}"
 echo -e"
- You can access the admin panel at:
+You can access the admin panel at:
 
-   ${green}[http://localhost/admin/login](http://localhost/admin/login)${plain}
+${green}[http://localhost/admin/login](http://localhost/admin/login)${plain}
 
-   ${yellow}- Email:${plain} ${green}admin@example.com${plain}
-   ${yellow}- Password:${plain} ${green}admin123 ${plain}
+${yellow}- Email:${plain} ${green}admin@example.com${plain}
+${yellow}- Password:${plain} ${green}admin123 ${plain}
 
-   To log in as a customer, you can directly register as a customer and then login at:
+To log in as a customer, you can directly register as a customer and then login at:
 
-    ${green}[http://localhost/customer/register](http://localhost/customer/register)${plain}"
+${green}[http://localhost/customer/register](http://localhost/customer/register)${plain}"
+
