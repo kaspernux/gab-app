@@ -1,89 +1,104 @@
 #!/bin/sh
 
 # Print GAB APP ASCII art
-printf "
-  ____  _   _ ____ ____      _    ____ _  __
- / ___|| | | / ___|  _ \    / \  / ___| |/ /
- \___ \| | | \___ \| |_) |  / _ \| |   | ' / 
-  ___) | |_| |___) |  __/  / ___ \ |___| . \ 
- |____/ \___/|____/|_|    /_/   \_\____|_|\_\
-                                             
-"
+printf "\e[34m
+ $$$$$$\   $$$$$$\  $$$$$$$\         $$$$$$\  $$$$$$$\  $$$$$$$\  
+$$  __$$\ $$  __$$\ $$  __$$\       $$  __$$\ $$  __$$\ $$  __$$\ 
+$$ /  \__|$$ /  $$ |$$ |  $$ |      $$ /  $$ |$$ |  $$ |$$ |  $$ |
+$$ |$$$$\ $$$$$$$$ |$$$$$$$\ |      $$$$$$$$ |$$$$$$$  |$$$$$$$  |
+$$ |\_$$ |$$  __$$ |$$  __$$\       $$  __$$ |$$  ____/ $$  ____/ 
+$$ |  $$ |$$ |  $$ |$$ |  $$ |      $$ |  $$ |$$ |      $$ |      
+\$$$$$$  |$$ |  $$ |$$$$$$$  |      $$ |  $$ |$$ |      $$ |      
+ \______/ \__|  \__|\_______/       \__|  \__|\__|      \__|      
+                                                                  
+                                                                  
+                                                                  
+\e[0m"
 
-# Install Docker
-sudo apt update
-sudo apt install -y \
+# Install LEMP stack
+sudo apt install software-properties-common -y
+
+# Check if Docker is installed
+docker -v &>/dev/null
+DOCKER_INSTALLED=$?
+
+# Check if Nginx is installed
+nginx -v &>/dev/null
+NGINX_INSTALLED=$?
+
+# Check if MySQL is installed
+mysql --version &>/dev/null
+MYSQL_INSTALLED=$?
+
+# Check if PHP is installed
+php -v &>/dev/null
+PHP_INSTALLED=$?
+
+# Check if Node.js is installed
+node -v &>/dev/null
+NODE_INSTALLED=$?
+
+# Check if Composer is installed
+composer -v &>/dev/null
+COMPOSER_INSTALLED=$?
+
+# Check if Git is installed
+git --version &>/dev/null
+GIT_INSTALLED=$?
+
+# Check if necessary packages are installed
+if [ $DOCKER_INSTALLED -eq 0 ]; then
+    echo "Docker is already installed. Skipping installation."
+else
+    echo "Installing Docker..."
+    # Install Docker
+    sudo apt update
+    sudo apt install -y \
     apt-transport-https \
     ca-certificates \
     curl \
     gnupg \
     lsb-release
 
-# Add Node.js repository and install Node.js and npm
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-NODE_MAJOR=20
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-sudo apt-get update && sudo apt-get install nodejs -y
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    echo \
+    "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-echo \
-  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io
 
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io
+    # Install Docker Compose
+    sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+fi
 
-# Set permissions
-chmod +x gab-app/scripts/*.sh
+if [ $NGINX_INSTALLED -eq 0 ]; then
+    echo "Nginx is already installed. Skipping installation."
+else
+    echo "Installing Nginx..."
+    # Install Nginx
+    sudo apt install nginx certbot python3-certbot-nginx -y
+    # Backup the default Nginx configuration
+    sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+    
+    # Configure Nginx
+    sudo cp gab-app/configurations/nginx/default.conf /etc/nginx/sites-available/default
+    sudo nginx -t
+    sudo systemctl reload nginx
+fi
 
-# Install LEMP stack
-sudo apt install nginx mysql-server software-properties-common -y
 
-# Add repository for latest PHP version
-sudo add-apt-repository ppa:ondrej/php -y
-sudo apt update
-
-# Install the latest PHP version
-sudo apt install php php-fpm php-mysql php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl certbot python3-certbot-nginx -y
-
-# Get the installed PHP version
-PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;');
-
-# Retrieve server timezone
-SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
-
-# Replace placeholder with server timezone in PHP configuration
-sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/configurations/php/php.ini
-
-# Extract PHP version
-PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;');
-
-# Replace placeholder with actual PHP version in Nginx configuration
-sed -i "s|fastcgi_pass unix:/var/run/php/php[0-9].[0-9]-fpm.sock;|fastcgi_pass unix:/var/run/php/php${PHP_VERSION}-fpm.sock;|" gab-app/configurations/nginx/default.conf
-
-# Start and enable services
-sudo systemctl start nginx
-sudo systemctl enable nginx
-sudo systemctl start mysql
-sudo systemctl enable mysql
-sudo systemctl start php"${PHP_VERSION}"-fpm
-sudo systemctl enable php"${PHP_VERSION}"-fpm
-
-# Backup the default Nginx configuration
-sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
-
-# Configure Nginx
-sudo cp gab-app/configurations/nginx/default.conf /etc/nginx/sites-available/default
-sudo nginx -t
-sudo systemctl reload nginx
-
-# Secure MySQL installation
-sudo mysql_secure_installation
+if [ $MYSQL_INSTALLED -eq 0 ]; then
+    echo "MySQL Server is already installed. Skipping installation."
+else
+    echo "Installing MySQL Server..."
+    # Install MySQL
+    sudo apt install mysql-server -y
+    sudo mysql_secure_installation
+fi
 
 # Create MySQL database and user for Laravel
 MYSQL_ROOT_PASSWORD="root"
@@ -103,14 +118,55 @@ sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/.env.example
 sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/.env.example
 sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env.example
 
+
+if [ $NODE_INSTALLED -eq 0 ]; then
+    echo "Node.js is already installed. Skipping installation."
+else
+    echo "Installing Node.js ..."
+    # Install Node.js
+    sudo apt-get update
+    sudo apt-get install -y nodejs
+fi
+
+if [ $PHP_INSTALLED -eq 0 ]; then
+    echo "PHP latest version is already installed. Skipping installation."
+else
+    echo "Installing PHP Latest version ..."
+    # Add repository for latest PHP version
+    sudo add-apt-repository ppa:ondrej/php -y
+    sudo apt update
+    
+    # Install the latest PHP version
+    sudo apt install php php-fpm php-mysql php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl -y
+    
+    # Retrieve server timezone
+    SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
+    
+    # Replace placeholder with server timezone in PHP configuration
+    sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/configurations/php/php.ini
+fi
+
+# Start and enable services
+sudo systemctl start nginx
+sudo systemctl enable nginx
+sudo systemctl start mysql
+sudo systemctl enable mysql
+sudo systemctl start php"${PHP_VERSION}"-fpm
+sudo systemctl enable php"${PHP_VERSION}"-fpm
+
 # Clone the repository
-git clone https://github.com/kaspernux/gab-app.git "$APP_DIR"
+cd .. && mkdir gab-app && git clone https://github.com/kaspernux/gab-app.git "$APP_DIR"
 
 # Define the directory where your app will be deployed
 APP_DIR="gab-app"
 
 # Change directory to the app directory
 cd "$APP_DIR" || exit
+
+# Set permissions
+chmod +x gab-app/scripts/*.sh
+
+echo "Let Build the GAB APP"
 
 # Just to be sure that no traces left
 docker-compose down -v
@@ -162,10 +218,10 @@ docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
 docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
 # Update the .env file inside the container
-docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example &&"
+docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
 
 # Settiing permissions
-docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $user:$user /var/www/html/storage/logs/"
+docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
 
 # Executing final commands
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
@@ -186,4 +242,4 @@ echo "Setup completed successfully! The GAB APP has been installed
 
    To log in as a customer, you can directly register as a customer and then login at:
 
-   [http://your_domain.com/customer/register](http://localhostt/customer/register)"
+   [http://your_domain.com/customer/register](http://localhost/customer/register)"
