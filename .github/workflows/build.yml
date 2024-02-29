@@ -29,6 +29,6 @@ jobs:
 
     - name: Run setup script
       run: |
-        chmod +x gab-app/scripts/setup.sh
-        ./gab-app/scripts/setup.sh
-
+        chmod +x gab-app/scripts/install.sh
+        ./gab-app/scripts/install.sh
+    
