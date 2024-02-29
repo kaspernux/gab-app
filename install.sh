@@ -161,9 +161,6 @@ sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" .configs/.env
 docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
 docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
-# Executing final commands
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
-
 # Update the .env file inside the container
 docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
 
