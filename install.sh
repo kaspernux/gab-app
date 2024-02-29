@@ -127,9 +127,9 @@ GIT_INSTALLED=$?
 
 # Check if necessary packages are installed
 if [ $DOCKER_INSTALLED -eq 0 ]; then
-    echo -e "${red}Docker is already installed. Skipping installation."
+    echo -e "${red}Docker is already installed. Skipping installation.${plain}"
 else
-    echo -e "${green}Installing Docker..."
+    echo -e "${green}Installing Docker...${plain}"
     # Install Docker
     sudo apt update
     sudo apt install -y \
@@ -156,9 +156,9 @@ chmod +x ~/.docker/cli-plugins/docker-compose
 fi
 
 if [ $NGINX_INSTALLED -eq 0 ]; then
-    echo -e "${red} Nginx is already installed. Skipping installation."
+    echo -e "${red} Nginx is already installed. Skipping installation.${plain}"
 else
-    echo -e "${green} Installing Nginx..."
+    echo -e "${green} Installing Nginx...${plain}"
     # Install Nginx
     sudo apt install nginx certbot python3-certbot-nginx -y
     # Backup the default Nginx configuration
@@ -172,9 +172,9 @@ fi
 
 
 if [ $MYSQL_INSTALLED -eq 0 ]; then
-    echo -e "${red} MySQL Server is already installed. Skipping installation."
+    echo -e "${red} MySQL Server is already installed. Skipping installation.${plain}"
 else
-    echo -e "${green} Installing MySQL Server..."
+    echo -e "${green} Installing MySQL Server...${plain}"
     # Install MySQL
     sudo apt install mysql-server -y
     sudo mysql_secure_installation
@@ -200,18 +200,18 @@ sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env.ex
 
 
 if [ $NODE_INSTALLED -eq 0 ]; then
-    echo -e "${red} Node.js is already installed. Skipping installation."
+    echo -e "${red} Node.js is already installed. Skipping installation.${plain}"
 else
-    echo -e "${red} Installing Node.js ..."
+    echo -e "${red} Installing Node.js ...${plain}"
     # Install Node.js
     sudo apt-get update
     sudo apt-get install -y nodejs
 fi
 
 if [ $PHP_INSTALLED -eq 0 ]; then
-    echo -e "${red} PHP latest version is already installed. Skipping installation."
+    echo -e "${red} PHP latest version is already installed. Skipping installation.${plain}"
 else
-    echo -e "${green} Installing PHP Latest version ..."
+    echo -e "${green} Installing PHP Latest version ...${plain}"
     # Add repository for latest PHP version
     sudo add-apt-repository ppa:ondrej/php -y
     sudo apt update
@@ -226,7 +226,7 @@ else
     sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/configurations/php/php.ini
 fi
 
-echo -e "${green} Starting all the services on your server..."
+echo -e "${green} Starting all the services on your server...${plain}"
 
 # Start and enable services
 sudo systemctl start nginx
@@ -261,29 +261,29 @@ nginx_container_id=$(docker ps -aqf "name=${NGINX_CONTAINER_NAME}")
 db_container_id=$(docker ps -aqf "name=${DB_CONTAINER_NAME}")
 
 # Checking connection
-echo -e "${yellow} Please wait... Waiting for MySQL connection..."
+echo -e "${yellow} Please wait... Waiting for MySQL connection...${plain}"
 while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" >/dev/null 2>&1; do
     sleep 1
 done
 
 # Creating empty database for Gabapp
-echo -e "${yellow} Creating empty database for Gabapp..."
+echo -e "${yellow} Creating empty database for Gabapp...${plain}"
 while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
     sleep 1
 done
 
 # Creating empty database for Gabapp testing
-echo -e "${yellow} Creating empty database for Gabapp testing..."
+echo -e "${yellow} Creating empty database for Gabapp testing...${plain}"
 while ! docker exec ${db_container_id} mysql --user=root --password="${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE ${MYSQL_GABAPP_TESTING_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
     sleep 1
 done
 
 # Setting up Gabapp
-echo -e "${yellow} Now, setting up GAB APP..."
+echo -e "${yellow} Now, setting up GAB APP...${plain}"
 docker exec ${nginx_container_id} git clone https://github.com/bagisto/bagisto /var/www/html/gab-app
 
 # Setting Gabapp stable version
-echo -e "${yellow} Now, setting up GABAPP stable version..."
+echo -e "${yellow} Now, setting up GABAPP stable version...${plain}"
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
 
 # Installing Composer dependencies inside container
@@ -314,15 +314,15 @@ docker-compose down -v
 # Building and running docker-compose file
 docker compose build && docker compose up -d
 
-echo -e "${green} Setup completed successfully! The GAB APP has been installed"
-echo -e"${yellow}
+echo -e "${yellow} Setup completed successfully! The GAB APP has been installed${plain}"
+echo -e"
  You can access the admin panel at:
 
-   [http://your_domain.com/admin/login](http://localhost/admin/login)
+   ${green}[http://localhost/admin/login](http://localhost/admin/login)${plain}
 
-   - Email: admin@example.com
-   - Password: admin123
+   ${yellow}- Email:${plain} ${green}admin@example.com${plain}
+   ${yellow}- Password:${plain} ${green}admin123 ${plain}
 
    To log in as a customer, you can directly register as a customer and then login at:
 
-   [http://your_domain.com/customer/register](http://localhost/customer/register)"
+    ${green}[http://localhost/customer/register](http://localhost/customer/register)${plain}"
