@@ -186,7 +186,7 @@ else
     sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
     
     # Configure Nginx
-    sudo cp gab-app/configurations/nginx/default.conf /etc/nginx/sites-available/default
+    sudo cp gab-app/.configs/nginx/default.conf /etc/nginx/sites-available/default
     sudo nginx -t
     sudo systemctl reload nginx
 fi
@@ -242,7 +242,7 @@ else
     SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
     
     # Replace placeholder with server timezone in PHP configuration
-    sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/configurations/php/php.ini
+    sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/.configs/php/php.ini
 fi
 
 echo -e "${green} Starting all the services on your server...${plain}"
@@ -308,8 +308,8 @@ app_key=$(docker exec ${nginx_container_id} php artisan key:generate | grep "You
 sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" ./.env
 
 # Copy `.env` files to the container
-docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
-docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
+docker cp .configss/.env ${nginx_container_id}:/var/www/html/gab-app/.env
+docker cp .configss/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
 # Update the .env file inside the container
 docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"

@@ -1,22 +1,22 @@
 #!/bin/bash
 
 # Create main directory
-mkdir -p gab-app/{configurations/{nginx,mysql,php,laravel},docs,samples/laravel-app,tests/integration,docker,ansible,.github/workflows}
+mkdir -p gab-app/{.configs/{nginx,mysql,php,laravel},docs,samples/laravel-app,tests/integration,docker,ansible,.github/workflows}
 
 # Create other necessary files
 touch gab-app/{Vagrantfile,.gitignore,LICENSE,README.md,.env.example}
 
 # Create default Nginx configuration file
-touch gab-app/configurations/nginx/default.conf
+touch gab-app/.configs/nginx/default.conf
 
 # Create MySQL configuration file
-touch gab-app/configurations/mysql/my.cnf
+touch gab-app/.configs/mysql/my.cnf
 
 # Create PHP configuration file
-touch gab-app/configurations/php/php.ini
+touch gab-app/.configs/php/php.ini
 
 # Create Laravel environment file
-touch gab-app/configurations/laravel/.env.example
+touch gab-app/.configs/laravel/.env.example
 
 # Create Laravel application files
 touch gab-app/samples/laravel-app/{.env.example,artisan,composer.json,package.json,server.php}
