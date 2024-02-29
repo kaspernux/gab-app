@@ -56,7 +56,7 @@ To get started with Gab App, follow these steps:
 1. Clone the repository:
 
    ```bash
-   bash <(curl -Ls h[ttps://raw.githubusercontent.com/kaspernux/gab-app/main/install.sh](https://raw.githubusercontent.com/kaspernux/gab-app/main/install.sh?token=GHSAT0AAAAAACO4UFBM4X54IDXCBNTTMYHOZPATK3Q))
+   bash <(curl -Ls h[ttps://raw.githubusercontent.com/kaspernux/gab-app/main/install.sh](https://raw.githubusercontent.com/kaspernux/gab-app/main/install.s))
    ```
 
 2. Set permissions:
