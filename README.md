@@ -1,6 +1,3 @@
-You can add the additional installation steps and system requirements information to your README.md as follows:
-
-```markdown
 # Gab App
 
 Welcome to Gab App! This is a Laravel-based e-commerce application built to simplify online shopping experiences. It offers a range of features to manage products, orders, customers, and more.
@@ -68,6 +65,3 @@ Contributions are welcome! If you'd like to contribute to Gab App, please follow
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-```
-
-You can replace "your_server_endpoint" with the actual URL where your application will be hosted. Make sure to replace placeholders like email and password with the actual credentials used in your application.
