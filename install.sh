@@ -200,15 +200,6 @@ else
     sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" gab-app/.configs/php/php.ini
 fi
 
-echo -e "${green} Starting all the services on your server...${plain}"
-
-# Start and enable services
-sudo systemctl start apache2
-sudo systemctl enable apache2
-sudo systemctl start mysql
-sudo systemctl enable mysql
-sudo systemctl start php-fpm
-sudo systemctl enable php-fpm
 
 # Check if necessary packages are installed
 if [ $DOCKER_INSTALLED -eq 0 ]; then
