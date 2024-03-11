@@ -280,6 +280,9 @@ chmod +x scripts/create_structure.sh || { echo "Failed to set execute permission
 
 echo "Let's build the GAB APP"
 
+# Change directory 
+cd /root/gab-app/docker
+
 # Just to be sure that no traces left
 docker compose down -v
 
