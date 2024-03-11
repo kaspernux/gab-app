@@ -284,7 +284,7 @@ cd /root/gab-app/docker
 docker compose down -v
 
 # Building and running docker compose file
-docker build -t gab-app . && docker compose up -d
+docker compose up -d
 
 # Wait for containers to be up and running
 sleep 10
