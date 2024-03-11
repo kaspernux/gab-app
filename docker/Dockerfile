@@ -51,10 +51,13 @@ ARG user
 # setting work directory
 WORKDIR $container_project_path
 
-# adding user
-RUN useradd -G www-data,root -u $uid -d /home/$user $user
-RUN mkdir -p /home/$user/.composer && \
-    chown -R $user:$user /home/$user
+# Adding user if it doesn't already exist
+RUN if ! id -u $user > /dev/null 2>&1; then \
+    useradd -r -G www-data,root -u $uid -d /home/$user $user && \
+    mkdir -p /home/$user/.composer && \
+    chown -R $user:$user /home/$user; \
+fi
+
 
 # setting apache
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
