@@ -266,7 +266,8 @@ APP_DIR="gab-app"
 cd "$APP_DIR" || exit
 
 # Set permissions
-chmod +x gab-app/scripts/*.sh
+chmod +x gab-app/scripts/create_structure.sh
+./create_structure.sh
 
 echo "Let Build the GAB APP"
 
