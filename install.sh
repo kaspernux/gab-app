@@ -278,13 +278,13 @@ chmod +x scripts/create_structure.sh || { echo "Failed to set execute permission
 echo "Let's build the GAB APP"
 
 # Change directory 
-cd /root/gab-app/docker/
+cd /root/gab-app/docker
 
 # Just to be sure that no traces left
 docker compose down -v
 
 # Building and running docker compose file
-docker build && docker compose up -d
+docker build -t gab-app . && docker compose up -d
 
 # Wait for containers to be up and running
 sleep 10
