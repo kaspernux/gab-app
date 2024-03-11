@@ -339,4 +339,3 @@ ${yellow}- Password:${plain} ${green}admin123 ${plain}
 To log in as a customer, you can directly register as a customer and then login at:
 
 ${green}[http://localhost/customer/register](http://localhost/customer/register)${plain}"
-
