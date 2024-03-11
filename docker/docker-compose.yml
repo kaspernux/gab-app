@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  gab-apache:
+  gab-php-apache:
     build:
       args:
         container_project_path: /var/www/html/
