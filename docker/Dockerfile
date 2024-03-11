@@ -61,6 +61,10 @@ fi
 
 # setting apache
 COPY apache.conf /etc/apache2/sites-available/000-default.conf
+# Install apache2 package
+RUN apt-get update && apt-get install -y apache2
+
+# Enable rewrite module
 RUN a2enmod rewrite
 
 # setting up project from `src` folder
