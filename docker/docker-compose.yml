@@ -1,21 +1,16 @@
-version: "3.1"
+version: "3.8"
 
 services:
- gab-nginx:
+  gab-nginx:
     build:
-      args:
-        container_project_path: /var/www/html/
-        uid: 1000
-        user: $USER
-      context: .
-      dockerfile: ./Dockerfile
-    image: nginx
+      context: ..
+      dockerfile: ./docker/Dockerfile
     ports:
-      - 80:80
+      - "80:80"
     volumes:
       - ./gab-configs/nginx-data:/var/www/html
     restart: unless-stopped
-    
+
   gab-mysql:
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
@@ -23,31 +18,31 @@ services:
       MYSQL_ROOT_HOST: "%"
       MYSQL_ROOT_PASSWORD: root
     ports:
-      - 3306:3306
+      - "3306:3306"
     volumes:
       - ./gab-configs/mysql-data:/var/lib/mysql
     restart: unless-stopped
-    
+
   gab-redis:
     image: redis:latest
     ports:
-      - 6379:6379
+      - "6379:6379"
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - ./gab-configs/redis-data:/data
     restart: unless-stopped
-    
+
   gab-phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     environment:
-      PMA_HOST: gab-mysql
+      PMA_HOST: mysql
       PMA_USER: root
       PMA_PASSWORD: root
       UPLOAD_LIMIT: 512M
     ports:
-      - 8080:80
+      - "8080:80"
     restart: unless-stopped
-    
+
   gab-elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:latest
     environment:
@@ -65,27 +60,25 @@ services:
     volumes:
       - ./gab-configs/elasticsearch-data:/var/lib/elasticsearch/data
     ports:
-      - 9200:9200
-      - 9300:9300
+      - "9200:9200"
+      - "9300:9300"
     restart: unless-stopped
-    
+
   gab-kibana:
     image: docker.elastic.co/kibana/kibana:latest
     environment:
-      - ELASTICSEARCH_HOSTS=http://gab-elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
-      - 5601:5601
+      - "5601:5601"
     depends_on:
-      - gab-elasticsearch
+      - elasticsearch
     restart: unless-stopped
-    
+
   gab-mailhog:
     image: mailhog/mailhog:latest
     logging:
-      # Disable saving logs.
       driver: 'none'
     ports:
-      # SMTP server.
-      - 1025:1025
-      - 8025:8025
+      - "1025:1025"   # SMTP server
+      - "8025:8025"   # Web interface
     restart: unless-stopped
