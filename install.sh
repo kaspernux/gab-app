@@ -256,7 +256,6 @@ sudo systemctl enable mysql
 sudo systemctl start php"${PHP_VERSION}"-fpm
 sudo systemctl enable php"${PHP_VERSION}"-fpm
 
-#!/bin/bash
 
 # Define the directory where your app will be deployed
 APP_DIR="/root/gab-app"
@@ -281,16 +280,18 @@ chmod +x scripts/create_structure.sh || { echo "Failed to set execute permission
 
 echo "Let's build the GAB APP"
 
-
 # Just to be sure that no traces left
-docker compose down -v
+docker-compose down -v
 
 # Building and running docker compose file
-docker compose build && docker compose up -d
+docker-compose build && docker-compose up -d
 
-# Container ID by image name
-nginx_container_id=$(docker ps -aqf "name=gab-nginx")
-db_container_id=$(docker ps -aqf "name=gab-mysql")
+# Wait for containers to be up and running
+sleep 10
+
+# Get container IDs
+nginx_container_id=$(docker-compose ps -q gab-nginx)
+db_container_id=$(docker-compose ps -q gab-mysql)
 
 # Check MySQL connection
 echo "Please wait... Waiting for MySQL connection..."
@@ -298,18 +299,18 @@ while ! docker exec ${db_container_id} mysqladmin ping -uroot -proot --silent; d
     sleep 1
 done
 
-# Creating empty database for Gabapp
-echo -e "${yellow} Creating empty database for Gabapp...${plain}"
+# Creating empty databases for Gabapp
+echo "Creating empty databases for Gabapp..."
 docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # Setting up Gabapp
-echo -e "${yellow} Now, setting up GAB APP...${plain}"
+echo "Setting up GAB APP..."
 docker exec ${nginx_container_id} git clone https://github.com/bagisto/bagisto /var/www/html/gab-app
 
 # Setting Gabapp stable version
-echo -e "${yellow} Now, setting up GABAPP stable version...${plain}"
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout $(git describe --tags $(git rev-list --tags --max-count=1))"
+echo "Setting up GABAPP stable version..."
+docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout \$(git describe --tags \$(git rev-list --tags --max-count=1))"
 
 # Install composer dependencies inside the container
 docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && composer install --no-dev"
@@ -318,36 +319,40 @@ docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && compos
 app_key=$(docker exec ${nginx_container_id} php artisan key:generate | grep "Your application key is" | awk '{print $5}')
 
 # Replace placeholder with the generated APP_KEY in .env file
-sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" ./.env
+sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" .env
 
 # Copy `.env` files to the container
-docker cp .configss/.env ${nginx_container_id}:/var/www/html/gab-app/.env
-docker cp .configss/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
+docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
+docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
 
 # Update the .env file inside the container
 docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
 
-# Settiing permissions
+# Setting permissions
 docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
 
 # Execute final commands for setup
-docker exec ${apache_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
-                     
+docker exec ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
+
 # Just to be sure that no traces left
 docker-compose down -v
 
 # Building and running docker-compose file
-docker compose build && docker compose up -d
+docker-compose build && docker-compose up -d
 
-echo -e "${yellow} Setup completed successfully! The GAB APP has been installed${plain}"
-echo -e"
+echo "Setup completed successfully! The GAB APP has been installed."
+
+cat <<EOF
+
 You can access the admin panel at:
 
-${green}[http://localhost/admin/login](http://localhost/admin/login)${plain}
+[http://localhost/admin/login](http://localhost/admin/login)
 
-${yellow}- Email:${plain} ${green}admin@example.com${plain}
-${yellow}- Password:${plain} ${green}admin123 ${plain}
+- Email: admin@example.com
+- Password: admin123
 
-To log in as a customer, you can directly register as a customer and then login at:
+To log in as a customer, you can directly register as a customer and then log in at:
 
-${green}[http://localhost/customer/register](http://localhost/customer/register)${plain}"
+[http://localhost/customer/register](http://localhost/customer/register)
+
+EOF
