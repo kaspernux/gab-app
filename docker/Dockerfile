@@ -59,12 +59,12 @@ RUN mkdir -p /home/$user/.composer && \
     chown -R $user:$user /home/$user
 
 # setting up nginx
-COPY ./.configs/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./.configs/nginx/nginx-site.conf /etc/nginx/sites-available/default
 RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
-# setting up project
-COPY . .
+# setting up project from `src` folder
+RUN chmod -R 775 $container_project_path
+RUN chown -R $user:www-data $container_project_path
 
 # changing user
 USER $user
