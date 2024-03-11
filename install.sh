@@ -296,6 +296,7 @@ docker exec ${apache_container_id} git clone https://github.com/bagisto/bagisto 
 # setting bagisto stable version
 echo "Now, setting up Gab-app stable version..."
 docker exec -i ${apache_container_id} bash -c "cd gab-app && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
+docker exec -i ${apache_container_id} bash -c "chown -R www-data:www-data /var/www/html/gab-app/storage && chmod -R 775 /var/www/html/gab-app/storage"
 
 # installing composer dependencies inside container
 docker exec -i ${apache_container_id} bash -c "cd gab-app && composer install"
