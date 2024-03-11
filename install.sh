@@ -256,20 +256,31 @@ sudo systemctl enable mysql
 sudo systemctl start php"${PHP_VERSION}"-fpm
 sudo systemctl enable php"${PHP_VERSION}"-fpm
 
-# Clone the repository
-cd .. && mkdir gab-app && git clone https://github.com/kaspernux/gab-app.git "$APP_DIR"
+#!/bin/bash
 
 # Define the directory where your app will be deployed
-APP_DIR="gab-app"
+APP_DIR="/root/gab-app"
+
+# Remove the old repository if it exists
+if [ -d "$APP_DIR" ]; then
+    echo "Removing the old gab-app repository..."
+    rm -rf "$APP_DIR" || { echo "Failed to remove the old gab-app repository"; exit 1; }
+fi
+
+# Clone the repository
+git clone https://github.com/kaspernux/gab-app.git "$APP_DIR" || { echo "Failed to clone the repository"; exit 1; }
 
 # Change directory to the app directory
-cd "$APP_DIR" || exit
+cd "$APP_DIR" || { echo "Failed to change directory to $APP_DIR"; exit 1; }
 
 # Set permissions
-chmod +x gab-app/scripts/create_structure.sh
-./create_structure.sh
+chmod +x scripts/create_structure.sh || { echo "Failed to set execute permissions for create_structure.sh"; exit 1; }
 
-echo "Let Build the GAB APP"
+# Execute create_structure.sh script
+./scripts/create_structure.sh || { echo "Failed to execute create_structure.sh script"; exit 1; }
+
+echo "Let's build the GAB APP"
+
 
 # Just to be sure that no traces left
 docker compose down -v
