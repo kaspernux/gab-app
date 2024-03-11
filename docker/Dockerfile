@@ -59,8 +59,8 @@ RUN mkdir -p /home/$user/.composer && \
     chown -R $user:$user /home/$user
 
 # setting up nginx
-COPY ./docker/nginx.conf /etc/nginx/nginx.conf
-COPY ./docker/nginx-site.conf /etc/nginx/sites-available/default
+COPY ./configs/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./configs/nginx/nginx-site.conf /etc/nginx/sites-available/default
 RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
 # setting up project
