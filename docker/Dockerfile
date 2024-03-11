@@ -63,6 +63,9 @@ COPY ./configs/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./configs/nginx/nginx-site.conf /etc/nginx/sites-available/default
 RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
+docker build -t gab-app .
+
+
 # setting up project
 COPY . .
 
