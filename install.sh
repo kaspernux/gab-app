@@ -275,13 +275,10 @@ cd "$APP_DIR" || { echo "Failed to change directory to $APP_DIR"; exit 1; }
 # Set permissions
 chmod +x scripts/create_structure.sh || { echo "Failed to set execute permissions for create_structure.sh"; exit 1; }
 
-# Execute create_structure.sh script
-./scripts/create_structure.sh || { echo "Failed to execute create_structure.sh script"; exit 1; }
-
 echo "Let's build the GAB APP"
 
 # Change directory 
-cd /root/gab-app/docker
+cd /root/gab-app
 
 # Just to be sure that no traces left
 docker compose down -v
