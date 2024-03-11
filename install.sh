@@ -104,16 +104,12 @@ case "${release}" in
         ;;
 esac
 
-# Install LEMP stack
+# Install LAMP stack
 sudo apt install software-properties-common -y
 
-# Check if Docker is installed
-docker -v &>/dev/null
-DOCKER_INSTALLED=$?
-
-# Check if Nginx is installed
-nginx -v &>/dev/null
-NGINX_INSTALLED=$?
+# Check if Apache is installed
+apache2 -v &>/dev/null
+APACHE_INSTALLED=$?
 
 # Check if MySQL is installed
 mysql --version &>/dev/null
@@ -134,6 +130,7 @@ COMPOSER_INSTALLED=$?
 # Check if Git is installed
 git --version &>/dev/null
 GIT_INSTALLED=$?
+
 
 # Check if necessary packages are installed
 if [ $DOCKER_INSTALLED -eq 0 ]; then
@@ -175,22 +172,20 @@ fetch_env_file() {
 # Fetch .env file from GitHub repository
 fetch_env_file
 
-# Continue with the rest of the script...
-
-if [ $NGINX_INSTALLED -eq 0 ]; then
-    echo -e "${red} Nginx is already installed. Skipping installation.${plain}"
+# Check if necessary packages are installed
+if [ $APACHE_INSTALLED -eq 0 ]; then
+    echo -e "${red}Apache is already installed. Skipping installation.${plain}"
 else
-    echo -e "${green} Installing Nginx...${plain}"
-    # Install Nginx
-    sudo apt install nginx certbot python3-certbot-nginx -y
-    # Backup the default Nginx configuration
-    sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+    echo -e "${green}Installing Apache...${plain}"
+    # Install Apache
+    sudo apt update
+    sudo apt install -y apache2
     
-    # Configure Nginx
-    sudo cp gab-app/.configs/nginx/default.conf /etc/nginx/sites-available/default
-    sudo nginx -t
-    sudo systemctl reload nginx
+    # Enable Apache modules
+    sudo a2enmod rewrite
+    sudo systemctl restart apache2
 fi
+
 
 if [ $MYSQL_INSTALLED -eq 0 ]; then
     echo -e "${red} MySQL Server is already installed. Skipping installation.${plain}"
@@ -249,12 +244,12 @@ fi
 echo -e "${green} Starting all the services on your server...${plain}"
 
 # Start and enable services
-sudo systemctl start nginx
-sudo systemctl enable nginx
+sudo systemctl start apache2
+sudo systemctl enable apache2
 sudo systemctl start mysql
 sudo systemctl enable mysql
-sudo systemctl start php"${PHP_VERSION}"-fpm
-sudo systemctl enable php"${PHP_VERSION}"-fpm
+sudo systemctl start php-fpm
+sudo systemctl enable php-fpm
 
 
 # Define the directory where your app will be deployed
@@ -290,7 +285,7 @@ docker compose up -d
 sleep 10
 
 # Get container IDs
-nginx_container_id=$(docker compose ps -q gab-nginx)
+apache_container_id=$(docker compose ps -q gab-php-apache)
 db_container_id=$(docker compose ps -q gab-mysql)
 
 # Check MySQL connection
@@ -306,33 +301,33 @@ docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EX
 
 # Setting up Gabapp
 echo "Setting up GAB APP..."
-docker exec ${nginx_container_id} git clone https://github.com/bagisto/bagisto /var/www/html/gab-app
+docker exec ${apache_container_id} git clone https://github.com/bagisto/bagisto /var/www/html/gab-app
 
 # Setting Gabapp stable version
 echo "Setting up GABAPP stable version..."
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout \$(git describe --tags \$(git rev-list --tags --max-count=1))"
+docker exec -i ${apache_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout \$(git describe --tags \$(git rev-list --tags --max-count=1))"
 
 # Install composer dependencies inside the container
-docker exec -i ${nginx_container_id} bash -c "cd /var/www/html/gab-app && composer install --no-dev"
+docker exec -i ${apache_container_id} bash -c "cd /var/www/html/gab-app && composer install --no-dev"
 
 # Generate application key and capture the output
-app_key=$(docker exec ${nginx_container_id} php artisan key:generate | grep "Your application key is" | awk '{print $5}')
+app_key=$(docker exec ${apache_container_id} php artisan key:generate | grep "Your application key is" | awk '{print $5}')
 
 # Replace placeholder with the generated APP_KEY in .env file
 sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" .env
 
 # Copy `.env` files to the container
-docker cp .configs/.env ${nginx_container_id}:/var/www/html/gab-app/.env
-docker cp .configs/.env.testing ${nginx_container_id}:/var/www/html/gab-app/.env.testing
+docker cp .configs/.env ${apache_container_id}:/var/www/html/gab-app/.env
+docker cp .configs/.env.testing ${apache_container_id}:/var/www/html/gab-app/.env.testing
 
 # Update the .env file inside the container
-docker exec ${nginx_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
+docker exec ${apache_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
 
 # Setting permissions
-docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
+docker exec ${apache_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
 
 # Execute final commands for setup
-docker exec ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
+docker exec ${apache_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
 
 # Just to be sure that no traces left
 docker compose down -v
