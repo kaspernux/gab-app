@@ -131,47 +131,6 @@ COMPOSER_INSTALLED=$?
 git --version &>/dev/null
 GIT_INSTALLED=$?
 
-
-# Check if necessary packages are installed
-if [ $DOCKER_INSTALLED -eq 0 ]; then
-    echo -e "${red}Docker is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing Docker...${plain}"
-    # Install Docker
-    sudo apt update
-    sudo apt install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release
-
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-
-    echo \
-        "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-    sudo apt update
-    sudo apt install -y docker-ce docker-ce-cli containerd.io
-
-    # Install Docker Compose
-    mkdir -p ~/.docker/cli-plugins/
-    curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-    chmod +x ~/.docker/cli-plugins/docker-compose
-
-fi
-
-# Function to fetch .env file from GitHub repository and copy into gab-app/.configs/php/php.ini and .configs/.env
-fetch_env_file() {
-    local repo_url="https://raw.githubusercontent.com/kaspernux/gab-app/main/.env"
-    curl -sSf "$repo_url" > gab-app/.configs/.env
-    cp gab-app/.configs/.env gab-app/.configs/php/php.ini
-}
-
-# Fetch .env file from GitHub repository
-fetch_env_file
-
 # Check if necessary packages are installed
 if [ $APACHE_INSTALLED -eq 0 ]; then
     echo -e "${red}Apache is already installed. Skipping installation.${plain}"
@@ -251,6 +210,46 @@ sudo systemctl enable mysql
 sudo systemctl start php-fpm
 sudo systemctl enable php-fpm
 
+# Check if necessary packages are installed
+if [ $DOCKER_INSTALLED -eq 0 ]; then
+    echo -e "${red}Docker is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing Docker...${plain}"
+    # Install Docker
+    sudo apt update
+    sudo apt install -y \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release
+
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    echo \
+        "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+    # Install Docker Compose
+    mkdir -p ~/.docker/cli-plugins/
+    curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+    chmod +x ~/.docker/cli-plugins/docker-compose
+
+fi
+
+# Function to fetch .env file from GitHub repository and copy into gab-app/.configs/php/php.ini and .configs/.env
+fetch_env_file() {
+    local repo_url="https://raw.githubusercontent.com/kaspernux/gab-app/main/.env"
+    curl -sSf "$repo_url" > gab-app/.configs/.env
+    cp gab-app/.configs/.env gab-app/.configs/php/php.ini
+}
+
+# Fetch .env file from GitHub repository
+fetch_env_file
+
 
 # Define the directory where your app will be deployed
 APP_DIR="/root/gab-app"
@@ -267,74 +266,55 @@ git clone https://github.com/kaspernux/gab-app.git "$APP_DIR" || { echo "Failed 
 # Change directory to the app directory
 cd "$APP_DIR" || { echo "Failed to change directory to $APP_DIR"; exit 1; }
 
-# Set permissions
-chmod +x scripts/create_structure.sh || { echo "Failed to set execute permissions for create_structure.sh"; exit 1; }
-
 echo "Let's build the GAB APP"
 
 # Change directory 
 cd /root/gab-app/docker
 
-# Just to be sure that no traces left
+# just to be sure that no traces left
 docker compose down -v
 
-# Building and running docker compose file
-docker compose up -d
+# building and running docker-compose file
+docker compose build && docker compose up -d
 
-# Wait for containers to be up and running
-sleep 10
+# container id by image name
+apache_container_id=$(docker ps -aqf "name=gab-php-apache")
+db_container_id=$(docker ps -aqf "name=gab-mysql")
 
-# Get container IDs
-apache_container_id=$(docker compose ps -q gab-php-apache)
-db_container_id=$(docker compose ps -q gab-mysql)
-
-# Check MySQL connection
+# checking connection
 echo "Please wait... Waiting for MySQL connection..."
-while ! docker exec ${db_container_id} mysqladmin ping -uroot -proot --silent; do
+while ! docker exec ${db_container_id} mysql --user=root --password=root -e "SELECT 1" >/dev/null 2>&1; do
     sleep 1
 done
 
-# Creating empty databases for Gabapp
-echo "Creating empty databases for Gabapp..."
-docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-docker exec ${db_container_id} mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS gabapp_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# creating empty database for gab-app
+echo "Creating empty database for gab-app..."
+while ! docker exec ${db_container_id} mysql --user=root --password=root -e "CREATE DATABASE gabbana CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
+    sleep 1
+done
 
-# Setting up Gabapp
-echo "Setting up GAB APP..."
+# creating empty database for gab-app testing
+echo "Creating empty database for gab-app testing..."
+while ! docker exec ${db_container_id} mysql --user=root --password=root -e "CREATE DATABASE gabbana_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" >/dev/null 2>&1; do
+    sleep 1
+done
+
+# setting up Gab-app
+echo "Now, setting up DOLCE GABBANA..."
 docker exec ${apache_container_id} git clone https://github.com/bagisto/bagisto /var/www/html/gab-app
+# setting bagisto stable version
+echo "Now, setting up Gab-app stable version..."
+docker exec -i ${apache_container_id} bash -c "cd gab-app && git reset --hard $(git describe --tags $(git rev-list --tags --max-count=1))"
 
-# Setting Gabapp stable version
-echo "Setting up GABAPP stable version..."
-docker exec -i ${apache_container_id} bash -c "cd /var/www/html/gab-app && git fetch --tags && git checkout \$(git describe --tags \$(git rev-list --tags --max-count=1))"
+# installing composer dependencies inside container
+docker exec -i ${apache_container_id} bash -c "cd gab-app && composer install"
 
-# Install composer dependencies inside the container
-docker exec -i ${apache_container_id} bash -c "cd /var/www/html/gab-app && composer install --no-dev"
-
-# Generate application key and capture the output
-app_key=$(docker exec ${apache_container_id} php artisan key:generate | grep "Your application key is" | awk '{print $5}')
-
-# Replace placeholder with the generated APP_KEY in .env file
-sed -i "s/APP_KEY=.*/APP_KEY=${app_key}/" .env
-
-# Copy `.env` files to the container
+# moving `.env` file
 docker cp .configs/.env ${apache_container_id}:/var/www/html/gab-app/.env
 docker cp .configs/.env.testing ${apache_container_id}:/var/www/html/gab-app/.env.testing
 
-# Update the .env file inside the container
-docker exec ${apache_container_id} bash -c "cp /var/www/html/gab-app/.env /var/www/html/gab-app/.env.example"
-
-# Setting permissions
-docker exec ${apache_container_id} bash -c "chmod -R 775 /var/www/html/storage/logs/ && chown -R $USER:$USER /var/www/html/storage/logs/"
-
-# Execute final commands for setup
-docker exec ${apache_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
-
-# Just to be sure that no traces left
-docker compose down -v
-
-# Building and running docker-compose file
-docker compose build && docker compose up -d
-
+# executing final commands
+docker exec -i ${apache_container_id} bash -c "cd gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan gab-app:publish --force && php artisan optimize:clear"
 echo "Setup completed successfully! The GAB APP has been installed."
 
 cat <<EOF
