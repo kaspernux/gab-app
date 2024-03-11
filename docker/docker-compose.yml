@@ -35,7 +35,7 @@ services:
   gab-phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     environment:
-      PMA_HOST: mysql
+      PMA_HOST: gab-mysql
       PMA_USER: root
       PMA_PASSWORD: root
       UPLOAD_LIMIT: 512M
@@ -71,7 +71,7 @@ services:
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      - gab-elasticsearch
     restart: unless-stopped
 
   gab-mailhog:
