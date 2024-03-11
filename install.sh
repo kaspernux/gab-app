@@ -281,17 +281,17 @@ chmod +x scripts/create_structure.sh || { echo "Failed to set execute permission
 echo "Let's build the GAB APP"
 
 # Just to be sure that no traces left
-docker-compose down -v
+docker compose down -v
 
 # Building and running docker compose file
-docker-compose build && docker-compose up -d
+docker compose build && docker compose up -d
 
 # Wait for containers to be up and running
 sleep 10
 
 # Get container IDs
-nginx_container_id=$(docker-compose ps -q gab-nginx)
-db_container_id=$(docker-compose ps -q gab-mysql)
+nginx_container_id=$(docker compose ps -q gab-nginx)
+db_container_id=$(docker compose ps -q gab-mysql)
 
 # Check MySQL connection
 echo "Please wait... Waiting for MySQL connection..."
@@ -335,10 +335,10 @@ docker exec ${nginx_container_id} bash -c "chmod -R 775 /var/www/html/storage/lo
 docker exec ${nginx_container_id} bash -c "cd /var/www/html/gab-app && php artisan optimize:clear && php artisan migrate:fresh --seed && php artisan storage:link && php artisan bagisto:publish --force && php artisan optimize:clear"
 
 # Just to be sure that no traces left
-docker-compose down -v
+docker compose down -v
 
 # Building and running docker-compose file
-docker-compose build && docker-compose up -d
+docker compose build && docker compose up -d
 
 echo "Setup completed successfully! The GAB APP has been installed."
 
