@@ -1,17 +1,37 @@
 #!/bin/bash
 
+# Check if the directory exists, if not, create it
+if [ ! -d "/var/www/html/gab-app" ]; then
+    mkdir -p /var/www/html/gab-app
+fi
+
 # Print GAB APP ASCII art
 printf "\e[34m
- $$$$$$\   $$$$$$\  $$$$$$$\         $$$$$$\  $$$$$$$\  $$$$$$$\  
-$$  __$$\ $$  __$$\ $$  __$$\       $$  __$$\ $$  __$$\ $$  __$$\ 
-$$ /  \__|$$ /  $$ |$$ |  $$ |      $$ /  $$ |$$ |  $$ |$$ |  $$ |
-$$ |$$$$\ $$$$$$$$ |$$$$$$$\ |      $$$$$$$$ |$$$$$$$  |$$$$$$$  |
-$$ |\_$$ |$$  __$$ |$$  __$$\       $$  __$$ |$$  ____/ $$  ____/ 
-$$ |  $$ |$$ |  $$ |$$ |  $$ |      $$ |  $$ |$$ |      $$ |      
-\$$$$$$  |$$ |  $$ |$$$$$$$  |      $$ |  $$ |$$ |      $$ |      
- \______/ \__|  \__|\_______/       \__|  \__|\__|      \__|      
-                                                                  
-                                                                  
+                                                                                                                                                                    
+                                                                                                                                                                    
+        GGGGGGGGGGGGG               AAA               BBBBBBBBBBBBBBBBB                                   AAA               PPPPPPPPPPPPPPPPP   PPPPPPPPPPPPPPPPP   
+     GGG::::::::::::G              A:::A              B::::::::::::::::B                                 A:::A              P::::::::::::::::P  P::::::::::::::::P  
+   GG:::::::::::::::G             A:::::A             B::::::BBBBBB:::::B                               A:::::A             P::::::PPPPPP:::::P P::::::PPPPPP:::::P 
+  G:::::GGGGGGGG::::G            A:::::::A            BB:::::B     B:::::B                             A:::::::A            PP:::::P     P:::::PPP:::::P     P:::::P
+ G:::::G       GGGGGG           A:::::::::A             B::::B     B:::::B                            A:::::::::A             P::::P     P:::::P  P::::P     P:::::P
+G:::::G                        A:::::A:::::A            B::::B     B:::::B                           A:::::A:::::A            P::::P     P:::::P  P::::P     P:::::P
+G:::::G                       A:::::A A:::::A           B::::BBBBBB:::::B                           A:::::A A:::::A           P::::PPPPPP:::::P   P::::PPPPPP:::::P 
+G:::::G    GGGGGGGGGG        A:::::A   A:::::A          B:::::::::::::BB   ---------------         A:::::A   A:::::A          P:::::::::::::PP    P:::::::::::::PP  
+G:::::G    G::::::::G       A:::::A     A:::::A         B::::BBBBBB:::::B  -:::::::::::::-        A:::::A     A:::::A         P::::PPPPPPPPP      P::::PPPPPPPPP    
+G:::::G    GGGGG::::G      A:::::AAAAAAAAA:::::A        B::::B     B:::::B ---------------       A:::::AAAAAAAAA:::::A        P::::P              P::::P            
+G:::::G        G::::G     A:::::::::::::::::::::A       B::::B     B:::::B                      A:::::::::::::::::::::A       P::::P              P::::P            
+ G:::::G       G::::G    A:::::AAAAAAAAAAAAA:::::A      B::::B     B:::::B                     A:::::AAAAAAAAAAAAA:::::A      P::::P              P::::P            
+  G:::::GGGGGGGG::::G   A:::::A             A:::::A   BB:::::BBBBBB::::::B                    A:::::A             A:::::A   PP::::::PP          PP::::::PP          
+   GG:::::::::::::::G  A:::::A               A:::::A  B:::::::::::::::::B                    A:::::A               A:::::A  P::::::::P          P::::::::P          
+     GGG::::::GGG:::G A:::::A                 A:::::A B::::::::::::::::B                    A:::::A                 A:::::A P::::::::P          P::::::::P          
+        GGGGGG   GGGGAAAAAAA                   AAAAAAABBBBBBBBBBBBBBBBB                    AAAAAAA                   AAAAAAAPPPPPPPPPP          PPPPPPPPPP          
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                                                                                  
                                                                 
 \e[0m"
 
