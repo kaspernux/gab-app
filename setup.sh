@@ -258,6 +258,9 @@ cat <<EOF > /etc/apache2/sites-available/gab-app.conf
 </VirtualHost>
 EOF
 
+# Navigate to the web server root directory
+cd /var/www/html
+
 # Create a new Laravel project
 composer create-project laravel/laravel:^10.0 gab-app --prefer-dist
 
