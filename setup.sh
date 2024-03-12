@@ -1,37 +1,53 @@
 #!/bin/bash
+# Function to check for conflicting packages and old files
+check_conflicts() {
+    echo "Checking for conflicting packages and old files..."
+    
+    # Check if Apache configuration file exists
+    if [ -f "/etc/apache2/apache2.conf" ]; then
+        echo "Apache configuration file already exists. Setting it to the new Laravel app..."
+        # Update Apache configuration to point to the new Laravel app
+        sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/apache2.conf
+        sudo systemctl restart apache2
+    fi
+
+    # Check if MySQL configuration file exists
+    if [ -f "/etc/mysql/mysql.conf.d/mysqld.cnf" ]; then
+        echo "MySQL configuration file already exists. Creating a backup..."
+        # Create a backup of the existing MySQL configuration file
+        sudo cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.backup
+        echo "Backup created: /etc/mysql/mysql.conf.d/mysqld.cnf.backup"
+        # Update MySQL configuration to point to the new Laravel app
+        sudo sed -i 's|/path/to/old/laravel|/var/www/html/gab-app|g' /etc/mysql/mysql.conf.d/mysqld.cnf
+        sudo systemctl restart mysql
+    fi
+
+    # Check if old Laravel project directory exists
+    if [ -d "/var/www/html/gab-app" ]; then
+        echo "Old Laravel project directory exists. Removing..."
+        rm -rf /var/www/html/gab-app
+    fi
+}
 
 # Check if the directory exists, if not, create it
 if [ ! -d "/var/www/html/gab-app" ]; then
     mkdir -p /var/www/html/gab-app
 fi
 
+
 # Print GAB APP ASCII art
 printf "\e[34m
-                                                                                                                                                                    
-                                                                                                                                                                    
-        GGGGGGGGGGGGG               AAA               BBBBBBBBBBBBBBBBB                                   AAA               PPPPPPPPPPPPPPPPP   PPPPPPPPPPPPPPPPP   
-     GGG::::::::::::G              A:::A              B::::::::::::::::B                                 A:::A              P::::::::::::::::P  P::::::::::::::::P  
-   GG:::::::::::::::G             A:::::A             B::::::BBBBBB:::::B                               A:::::A             P::::::PPPPPP:::::P P::::::PPPPPP:::::P 
-  G:::::GGGGGGGG::::G            A:::::::A            BB:::::B     B:::::B                             A:::::::A            PP:::::P     P:::::PPP:::::P     P:::::P
- G:::::G       GGGGGG           A:::::::::A             B::::B     B:::::B                            A:::::::::A             P::::P     P:::::P  P::::P     P:::::P
-G:::::G                        A:::::A:::::A            B::::B     B:::::B                           A:::::A:::::A            P::::P     P:::::P  P::::P     P:::::P
-G:::::G                       A:::::A A:::::A           B::::BBBBBB:::::B                           A:::::A A:::::A           P::::PPPPPP:::::P   P::::PPPPPP:::::P 
-G:::::G    GGGGGGGGGG        A:::::A   A:::::A          B:::::::::::::BB   ---------------         A:::::A   A:::::A          P:::::::::::::PP    P:::::::::::::PP  
-G:::::G    G::::::::G       A:::::A     A:::::A         B::::BBBBBB:::::B  -:::::::::::::-        A:::::A     A:::::A         P::::PPPPPPPPP      P::::PPPPPPPPP    
-G:::::G    GGGGG::::G      A:::::AAAAAAAAA:::::A        B::::B     B:::::B ---------------       A:::::AAAAAAAAA:::::A        P::::P              P::::P            
-G:::::G        G::::G     A:::::::::::::::::::::A       B::::B     B:::::B                      A:::::::::::::::::::::A       P::::P              P::::P            
- G:::::G       G::::G    A:::::AAAAAAAAAAAAA:::::A      B::::B     B:::::B                     A:::::AAAAAAAAAAAAA:::::A      P::::P              P::::P            
-  G:::::GGGGGGGG::::G   A:::::A             A:::::A   BB:::::BBBBBB::::::B                    A:::::A             A:::::A   PP::::::PP          PP::::::PP          
-   GG:::::::::::::::G  A:::::A               A:::::A  B:::::::::::::::::B                    A:::::A               A:::::A  P::::::::P          P::::::::P          
-     GGG::::::GGG:::G A:::::A                 A:::::A B::::::::::::::::B                    A:::::A                 A:::::A P::::::::P          P::::::::P          
-        GGGGGG   GGGGAAAAAAA                   AAAAAAABBBBBBBBBBBBBBBBB                    AAAAAAA                   AAAAAAAPPPPPPPPPP          PPPPPPPPPP          
-                                                                                                                                                                    
-                                                                                                                                                                    
-                                                                                                                                                                    
-                                                                                                                                                                    
-                                                                                                                                                                    
-                                                                                                                                                                    
-                                                                                                                                                                                                                                  
+ ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄               ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌             ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌            ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌
+▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌            ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌
+▐░▌ ▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▄▄▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌
+▐░▌▐░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+▐░▌ ▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▀▀▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌            ▐░▌       ▐░▌▐░▌          ▐░▌          
+▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄█░▌            ▐░▌       ▐░▌▐░▌          ▐░▌          
+▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌             ▐░▌       ▐░▌▐░▌          ▐░▌          
+ ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀               ▀         ▀  ▀            ▀                                                                                                                                                                                                                                        
                                                                 
 \e[0m"
 
