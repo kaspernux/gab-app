@@ -212,11 +212,23 @@ else
     sudo apt install -y git
 fi
 
+# Install phpMyAdmin
+sudo apt update
+sudo apt install phpmyadmin -y
+
+# Configure phpMyAdmin for Apache
+sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+sudo a2enconf phpmyadmin
+sudo systemctl reload apache2
+
 # Create MySQL database and user for Laravel
 MYSQL_ROOT_PASSWORD="root"
 MYSQL_LARAVEL_DB="gab_app"
 MYSQL_LARAVEL_USER="root"
 MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
+
+# Save MySQL password to a text file
+echo "MySQL root password: ${MYSQL_ROOT_PASSWORD}" > mysql_password.txt
 
 sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<MYSQL_SCRIPT
 CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
