@@ -104,7 +104,6 @@ case "${release}" in
         ;;
 esac
 
-# Continue with the rest of your script...
 # Install LAMP stack
 sudo apt install software-properties-common -y
 
@@ -212,6 +211,40 @@ else
     sudo apt update
     sudo apt install -y git
 fi
+
+# Create MySQL database and user for Laravel
+MYSQL_ROOT_PASSWORD="root"
+MYSQL_LARAVEL_DB="gab_app"
+MYSQL_LARAVEL_USER="root"
+MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
+
+sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<MYSQL_SCRIPT
+CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
+CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+MYSQL_SCRIPT
+
+# Update Laravel application's .env file with MySQL database configuration
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/.env
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/.env
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env
+
+# Create Apache virtual host configuration for Laravel app
+cat <<EOF > /etc/apache2/sites-available/gab-app.conf
+<VirtualHost *:80>
+    ServerName your_domain_or_server_ip
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html/gab-app/public
+
+    <Directory /var/www/html/gab-app>
+        AllowOverride All
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+EOF
 
 # Create a new Laravel project
 composer create-project laravel/laravel:^10.0 gab-app --prefer-dist
