@@ -253,4 +253,18 @@ sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
 
 # Display Laravel installation completion message
 echo -e "${green}Laravel application is installed and configured successfully!${plain}"
-echo -e "${green}You can now access your Laravel application at http://your_domain_or_server_ip.${plain}"
+echo -e "${green}You can now access your Laravel application${plain}"
+cat <<EOF
+
+You can access the admin panel at:
+
+[http://localhost/admin/login](http://localhost/admin/login)
+
+- Email: admin@example.com
+- Password: admin123
+
+To log in as a customer, you can directly register as a customer and then log in at:
+
+[http://localhost/customer/register](http://localhost/customer/register)
+
+EOF
