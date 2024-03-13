@@ -198,12 +198,11 @@ if ! command -v mysql >/dev/null; then
     # Save MySQL password to a text file
     echo "MySQL root password: ${MYSQL_ROOT_PASSWORD}" > mysql_password.txt
     
-    sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<'MYSQL_SCRIPT'
-    CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
-    CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}';
-    GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION;
-    FLUSH PRIVILEGES;
-    MYSQL_SCRIPT
+    sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
+    "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
+    CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
+    GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
+    FLUSH PRIVILEGES;"
 fi
 
 # Check if phpMyAdmin is already installed
