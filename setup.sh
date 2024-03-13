@@ -23,18 +23,18 @@ check_conflicts() {
         echo "Apache configuration file already exists. Setting it to the new Laravel app..."
         # Update Apache configuration to point to the new Laravel app
         sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/apache2.conf
-        sudo systemctl restart apache2
+        sudo systemctl restart apache2 || handle_error "Failed to restart Apache"
     fi
 
     # Check if MySQL configuration file exists
     if [ -f "/etc/mysql/mysql.conf.d/mysqld.cnf" ]; then
         echo "MySQL configuration file already exists. Creating a backup..."
         # Create a backup of the existing MySQL configuration file
-        sudo cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.backup
+        sudo cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.backup || handle_error "Failed to backup MySQL configuration"
         echo "Backup created: /etc/mysql/mysql.conf.d/mysqld.cnf.backup"
         # Update MySQL configuration to point to the new Laravel app
         sudo sed -i 's|/path/to/old/laravel|/var/www/html/gab-app|g' /etc/mysql/mysql.conf.d/mysqld.cnf
-        sudo systemctl restart mysql
+        sudo systemctl restart mysql || handle_error "Failed to restart MySQL"
     fi
 
     # Check if old Laravel project directory exists
@@ -42,7 +42,7 @@ check_conflicts() {
         echo "Old Laravel project directory exists. Backing up..."
         backup_file "/var/www/html/gab-app"
         echo "Removing old Laravel project directory..."
-        rm -rf /var/www/html/gab-app
+        rm -rf /var/www/html/gab-app || handle_error "Failed to remove old Laravel project directory"
     fi
 }
 
