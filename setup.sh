@@ -9,15 +9,19 @@ handle_error() {
 # Function to backup a file or directory
 backup_file() {
     if [ -e "$1" ]; then
-        cp -r "$1" "$1.backup" || handle_error "Failed to backup $1"
-        echo "Backup created: $1.backup"
+        if [ ! -e "$1.backup" ]; then
+            cp -r "$1" "$1.backup" || handle_error "Failed to backup $1"
+            echo "Backup created: $1.backup"
+        else
+            echo "Backup already exists: $1.backup"
+        fi
     fi
 }
 
 # Function to check for conflicting packages and old files
 check_conflicts() {
     echo "Checking for conflicting packages and old files..."
-    
+
     # Check if Apache configuration file exists
     if [ -f "/etc/apache2/apache2.conf" ]; then
         echo "Apache configuration file already exists. Setting it to the new Laravel app..."
@@ -232,13 +236,16 @@ sudo chown -R www-data:www-data /var/www/html/gab-app
 sudo chmod -R 755 /var/www/html/gab-app/storage
 sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
 
-# Update Laravel application's .env file with MySQL database configuration
-sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
-sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /var/www/html/gab-app/.env
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /var/www/html/gab-app/.env
+# Embed database credentials into Laravel .env file
+echo "DB_CONNECTION=mysql" >> /var/www/html/gab-app/.env
+echo "DB_HOST=127.0.0.1" >> /var/www/html/gab-app/.env
+echo "DB_PORT=3306" >> /var/www/html/gab-app/.env
+echo "DB_DATABASE=${MYSQL_LARAVEL_DB}" >> /var/www/html/gab-app/.env
+echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
+echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
 
 # Update Apache configuration to point to the Laravel app
-sudo sed -i "s|/var/www/html|/var/www/html/gab-app/public|g" /etc/apache2/sites-available/000-default.conf
+sudo sed -i "s|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g" /etc/apache2/sites-available/000-default.conf
 
 # Restart Apache to apply changes
 sudo systemctl restart apache2
