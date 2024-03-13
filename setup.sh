@@ -8,12 +8,13 @@ handle_error() {
 
 # Function to backup a file or directory
 backup_file() {
-    if [ -e "$1" ]; then
-        if [ ! -e "$1.backup" ]; then
-            cp -r "$1" "$1.backup" || handle_error "Failed to backup $1"
-            echo "Backup created: $1.backup"
+    local file="$1"
+    if [ -e "$file" ]; then
+        if [ ! -e "$file.backup" ]; then
+            cp -r "$file" "$file.backup" || handle_error "Failed to backup $file"
+            echo "Backup created: $file.backup"
         else
-            echo "Backup already exists: $1.backup"
+            echo "Backup already exists: $file.backup"
         fi
     fi
 }
@@ -22,27 +23,29 @@ backup_file() {
 check_conflicts() {
     echo "Checking for conflicting packages and old files..."
 
-    # Check if Apache configuration file exists
-    if [ -f "/etc/apache2/sites-available/gab-app.conf" ]; then
+    local apache_conf="/etc/apache2/sites-available/gab-app.conf"
+    local mysql_conf="/etc/mysql/mysql.conf.d/mysqld.cnf"
+    local laravel_dir="/var/www/html/gab-app"
+
+    # Backup existing Apache configuration file
+    [ -f "$apache_conf" ] && {
         echo "Apache configuration file already exists. Creating a backup..."
-        # Create a backup of the existing Apache configuration file
-        backup_file "/etc/apache2/sites-available/gab-app.conf"
-    fi
+        backup_file "$apache_conf"
+    }
 
-    # Check if MySQL configuration file exists
-    if [ -f "/etc/mysql/mysql.conf.d/mysqld.cnf" ]; then
+    # Backup existing MySQL configuration file
+    [ -f "$mysql_conf" ] && {
         echo "MySQL configuration file already exists. Creating a backup..."
-        # Create a backup of the existing MySQL configuration file
-        backup_file "/etc/mysql/mysql.conf.d/mysqld.cnf"
-    fi
+        backup_file "$mysql_conf"
+    }
 
-    # Check if old Laravel project directory exists
-    if [ -d "/var/www/html/gab-app" ]; then
-        echo "Old Laravel project directory exists. Backing up..."
-        backup_file "/var/www/html/gab-app"
+    # Backup and remove old Laravel project directory
+    [ -d "$laravel_dir" ] && {
+        echo "Old Laravel project directory exists. Backing up and removing..."
+        backup_file "$laravel_dir"
         echo "Removing old Laravel project directory..."
-        rm -rf /var/www/html/gab-app || handle_error "Failed to remove old Laravel project directory"
-    fi
+        rm -rf "$laravel_dir" || handle_error "Failed to remove old Laravel project directory"
+    }
 }
 
 # Print GAB APP ASCII art
@@ -61,12 +64,12 @@ printf "\e[34m
                                                                 
 \e[0m"
 
+# Define colors
 red='\033[0;31m'
 green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-cur_dir=$(pwd)
 # Check root privilege
 if [ "$(id -u)" -ne 0 ]; then
     handle_error "Please run this script with root privilege"
@@ -86,190 +89,127 @@ if [ ! -d "/var/www/html/gab-app" ]; then
     mkdir -p /var/www/html/gab-app
 fi
 
-# Check OS and set release variable
-if [[ -f /etc/os-release ]]; then
-    source /etc/os-release
-    release=$ID
-elif [[ -f /usr/lib/os-release ]]; then
-    source /usr/lib/os-release
-    release=$ID
-else
-    echo "Failed to check the system OS, please contact the author!" >&2
-    exit 1
-fi
-echo "The OS release is: $release"
-
-arch3xui() {
-    case "$(uname -m)" in
-    x86_64 | x64 | amd64) printf 'amd64' ;;
-    i*86 | x86) printf '386' ;;
-    armv8* | armv8 | arm64 | aarch64) printf 'arm64' ;;
-    armv7* | armv7 | arm) printf 'armv7' ;;
-    armv6* | armv6) printf 'armv6' ;;
-    armv5* | armv5) printf 'armv5' ;;
-    *) echo -e "\033[0;31mUnsupported CPU architecture! \033[0m" >&2 && rm -f setup.sh && exit 1 ;;
-    esac
-}
-
-echo "arch: $(arch3xui)"
-
-os_version=""
-os_version=$(grep -i version_id /etc/os-release | cut -d '"' -f2 | cut -d . -f1)
-
-# Check OS version
-case "${release}" in
+# OS detection and version check
+source /etc/os-release || handle_error "Failed to check the system OS"
+case "$ID" in
     centos)
-        if [[ ${os_version} -lt 8 ]]; then
-            echo -e "\033[0;31mPlease use CentOS 8 or higher \033[0m\n" >&2 && exit 1
-        fi
+        [ "${VERSION_ID%%.*}" -lt 8 ] && handle_error "Please use CentOS 8 or higher"
         ;;
     ubuntu)
-        if [[ ${os_version} -lt 20 ]]; then
-            echo -e "\033[0;31mPlease use Ubuntu 20 or higher version!\033[0m\n" >&2 && exit 1
-        fi
+        [ "${VERSION_ID%%.*}" -lt 20 ] && handle_error "Please use Ubuntu 20 or higher version!"
         ;;
     fedora)
-        if [[ ${os_version} -lt 36 ]]; then
-            echo -e "\033[0;31mPlease use Fedora 36 or higher version!\033[0m\n" >&2 && exit 1
-        fi
+        [ "${VERSION_ID%%.*}" -lt 36 ] && handle_error "Please use Fedora 36 or higher version!"
         ;;
     debian)
-        if [[ ${os_version} -lt 11 ]]; then
-            echo -e "\033[0;31mPlease use Debian 11 or higher \033[0m\n" >&2 && exit 1
-        fi
+        [ "${VERSION_ID%%.*}" -lt 11 ] && handle_error "Please use Debian 11 or higher"
         ;;
     almalinux)
-        if [[ ${os_version} -lt 9 ]]; then
-            echo -e "\033[0;31mPlease use AlmaLinux 9 or higher \033[0m\n" >&2 && exit 1
-        fi
+        [ "${VERSION_ID%%.*}" -lt 9 ] && handle_error "Please use AlmaLinux 9 or higher"
         ;;
     rocky)
-        if [[ ${os_version} -lt 9 ]]; then
-            echo -e "\033[0;31mPlease use RockyLinux 9 or higher \033[0m\n" >&2 && exit 1
-        fi
+        [ "${VERSION_ID%%.*}" -lt 9 ] && handle_error "Please use RockyLinux 9 or higher"
         ;;
-    arch)
-        echo "Your OS is ArchLinux"
-        ;;
-    manjaro)
-        echo "Your OS is Manjaro"
-        ;;
-    armbian)
-        echo "Your OS is Armbian"
+    arch|manjaro|armbian)
+        echo "Your OS is supported."
         ;;
     *)
-        echo -e "\033[0;31mFailed to check the OS version, please contact the author!\033[0m" >&2 && exit 1
+        handle_error "Unsupported OS"
         ;;
 esac
 
 # Install LAMP stack
 sudo apt install software-properties-common -y
 
-# Check if Apache is installed
-apache2 -v &>/dev/null
-APACHE_INSTALLED=$?
+# Install necessary dependencies
+echo "Installing necessary dependencies..."
+sudo apt update
+sudo apt install -y \
+    apache2 \
+    mysql-server \
+    php \
+    php-mysql \
+    php-cli \
+    php-curl \
+    php-gd \
+    php-mbstring \
+    php-xml \
+    php-sqlite3\
+    composer \
+    nodejs \
+    npm \
+    git \
+    php-fpm \
+    php-common \
+    php-xmlrpc \
+    php-soap \
+    php-zip \
+    fail2ban
 
-# Check if MySQL is installed
-mysql --version &>/dev/null
-MYSQL_INSTALLED=$?
-
-# Check if PHP is installed
-php -v &>/dev/null
-PHP_INSTALLED=$?
-
-# Check if Composer is installed
-composer -v &>/dev/null
-COMPOSER_INSTALLED=$?
-
-# Check if Node.js is installed
-node -v &>/dev/null
-NODE_INSTALLED=$?
-
-# Check if NPM is installed
-npm -v &>/dev/null
-NPM_INSTALLED=$?
-
-# Check if Git is installed
-git --version &>/dev/null
-GIT_INSTALLED=$?
-
-if [ $PHP_INSTALLED -eq 0 ]; then
-    echo -e "${red}PHP is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing PHP and required extensions...${plain}"
-    # Add repository for latest PHP version
-    sudo add-apt-repository ppa:ondrej/php -y
-    sudo apt update
-    
-    # Install the latest PHP version and required extensions
-    sudo apt install -y php php-fpm php-mysql php-bcmath php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl php-bz2 php-intl unzip
-    
-    # Retrieve server timezone
-    SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
-    
-    # Replace placeholder with server timezone in PHP configuration
-    sudo sed -i "s|;date.timezone =|date.timezone = \"${SERVER_TIMEZONE}\"|" /etc/php/{VERSION}/apache2/php.ini
-fi
+# Inform user about successful installation of dependencies
+    echo -e "${green}Dependencies installed successfully.${plain}"
 
 # Check if necessary packages are installed
-if [ $APACHE_INSTALLED -eq 0 ]; then
-    echo -e "${red}Apache is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing Apache...${plain}"
-    sudo apt install apache2 -y
-    sudo a2enmod rewrite
-    sudo systemctl restart apache2
+packages=("apache2" "mysql-server" "php" "composer" "nodejs" "npm" "git")
+
+# Enable Apache and MySQL services
+    echo "Enabling Apache and MySQL services..."
+    sudo systemctl enable apache2
+    sudo systemctl enable mysql
+
+    # Check if Apache and MySQL services are running
+    if ! systemctl is-active --quiet apache2; then
+        handle_error "Apache service failed to start."
+    fi
+
+    if ! systemctl is-active --quiet mysql; then
+        handle_error "MySQL service failed to start."
+    fi
+
+
+for package in "${packages[@]}"; do
+    if ! command -v "$package" &>/dev/null; then
+        echo -e "${green}Installing $package...${plain}"
+        sudo apt install "$package" -y
+    else
+        echo -e "${red}$package is already installed. Skipping installation.${plain}"
+    fi
+done
+
+# Retrieve PHP version installed on the system
+PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+
+# Construct the path to the PHP configuration file
+PHP_CONFIG_FILE="/etc/php/${PHP_VERSION}/apache2/php.ini"
+
+# Check if the PHP configuration file exists
+if [ ! -f "$PHP_CONFIG_FILE" ]; then
+    # Fallback path for PHP configuration file
+    PHP_CONFIG_FILE="/etc/php/${PHP_VERSION}/cli/php.ini"
 fi
 
-if [ $COMPOSER_INSTALLED -eq 0 ]; then
-    echo -e "${red}Composer is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing Composer...${plain}"
-    # Install Composer
-    sudo apt update
-    sudo apt install -y composer
+# Check if the PHP configuration file exists
+if [ ! -f "$PHP_CONFIG_FILE" ]; then
+    echo -e "${red}PHP configuration file not found.${plain}"
+    exit 1
 fi
 
-if [ $NODE_INSTALLED -eq 0 ]; then
-    echo -e "${red}Node.js is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing Node.js...${plain}"
-    # Install Node.js
-    sudo apt update
-    sudo apt install -y nodejs
-fi
+# Retrieve server timezone
+SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
 
-if [ $NPM_INSTALLED -eq 0 ]; then
-    echo -e "${red}NPM is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing NPM...${plain}"
-    # Install NPM
-    sudo apt update
-    sudo apt install -y npm
-fi
+# Replace placeholder with server timezone in PHP configuration
+sudo sed -i "s|;date.timezone =|date.timezone = \"${SERVER_TIMEZONE}\"|" "$PHP_CONFIG_FILE"
 
-if [ $GIT_INSTALLED -eq 0 ]; then
-    echo -e "${red}Git is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing Git...${plain}"
-    # Install Git
-    sudo apt update
-    sudo apt install -y git
-fi
+# Enable Apache modules
+sudo a2enmod rewrite
+sudo systemctl restart apache2
 
-if [ $MYSQL_INSTALLED -eq 0 ]; then
-    echo -e "${red}MySQL Server is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing MySQL Server...${plain}"
-    sudo apt install mysql-server -y
-    sudo mysql_secure_installation
-    sudo systemctl start mysql
-    sudo systemctl enable mysql 
-fi
+# Install phpMyAdmin
 if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
+    echo -e "${green}Installing phpMyAdmin...${plain}"
     sudo apt install phpmyadmin -y
 
-    # Create phpMyAdmin configuration file
+    # Configure phpMyAdmin
     sudo tee /etc/apache2/conf-available/phpmyadmin.conf > /dev/null <<EOF
     Alias /phpmyadmin /usr/share/phpmyadmin
     <Directory /usr/share/phpmyadmin>
@@ -353,60 +293,53 @@ fi
 
 # Install Laravel
 if [ ! -f "/var/www/html/gab-app/composer.json" ]; then
+    echo -e "${green}Installing Laravel...${plain}"
     cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
     composer create-project --prefer-dist laravel/laravel .
     composer install
     cp .env.example .env
     php artisan key:generate
     sudo chown -R www-data:www-data /var/www/html/gab-app
-    sudo chown -R www-data:www-data /var/www/html/gab-app
     sudo chmod -R 755 /var/www/html/gab-app/storage
     sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
 
-    # Define MySQL credentials for Laravel
+    # MySQL credentials for Laravel
     MYSQL_LARAVEL_DB="gab_app"
     MYSQL_LARAVEL_USER="gab_app_user"
     MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
 
-    # Create mysql-credentials.txt inside the gab-app folder
+    # Save MySQL credentials
     sudo tee /root/mysql-credentials.txt > /dev/null <<EOF
     MySQL Database: ${MYSQL_LARAVEL_DB}
     MySQL User: ${MYSQL_LARAVEL_USER}
     MySQL Password: ${MYSQL_LARAVEL_PASSWORD}
 EOF
-    # Create MySQL database and user for GAB-APP
+
+    # Create MySQL database and user for Laravel
     sudo mysql -e \
     "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
     CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
     GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
     FLUSH PRIVILEGES;"
- 
-    # Embed database credentials into Laravel .env file
-    sudo sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
-    sudo sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /var/www/html/gab-app/.env
-    sudo sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /var/www/html/gab-app/.env
+
+   # Embed database credentials into Laravel .env file
+    sudo sed -i "s/^# DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
+    sudo sed -i "s/^# DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /var/www/html/gab-app/.env
+    sudo sed -i "s/^# DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /var/www/html/gab-app/.env
+    sudo sed -i "s/^# DB_CONNECTION=mysql/" /var/www/html/gab-app/.env
+    sudo sed -i "s/^# DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/" /var/www/html/gab-app/.env
+    sudo sed -i "s/^# DB_PORT=3306/DB_PORT=3306/" /var/www/html/gab-app/.env
 
 
-    # Configure Apache virtual host for your Laravel project
+    # Configure Apache virtual host for Laravel
     sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
+    sudo sed -i "s|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g" /etc/apache2/sites-available/gab-app.conf
+    sudo a2ensite gab-app.conf
+    sudo a2dissite 000-default.conf
+    sudo systemctl restart apache2
 
     # Backup Apache virtual host configuration
     backup_file "/etc/apache2/sites-available/gab-app.conf"
-
-    # Configure Apache virtual host for your Laravel project
-    sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
-
-    # Edit Apache virtual host configuration file
-    sudo sed -i 's#/var/www/html#/var/www/html/gab-app/public#g' /etc/apache2/sites-available/gab-app.conf
-
-    # Enable Apache virtual host for your Laravel project
-    sudo a2ensite gab-app.conf
-
-    # Disable the default Apache virtual host
-    sudo a2dissite 000-default.conf
-
-    # Restart Apache to apply changes
-    sudo systemctl restart apache2
 
     # Allow Apache through firewall
     sudo ufw allow 'Apache'
@@ -418,12 +351,10 @@ EOF
     sudo systemctl restart mysql
 
     cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
-    composer dump-autoload
-    php artisan db:seed
     php artisan migrate
-    php artisan vendor:publish --all
-    php artisan optimize
     php artisan serve
+    sudo systemctl restart apache2
+
 fi
 
 # Inform user about MySQL credentials
