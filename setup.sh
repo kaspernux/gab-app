@@ -108,45 +108,45 @@ arch3xui() {
     armv7* | armv7 | arm) echo 'armv7' ;;
     armv6* | armv6) echo 'armv6' ;;
     armv5* | armv5) echo 'armv5' ;;
-    *) echo -e "${green}Unsupported CPU architecture! ${plain}" && rm -f install.sh && exit 1 ;;
+    *) echo -e "\033[0;31mUnsupported CPU architecture! \033[0m" >&2 && rm -f install.sh && exit 1 ;;
     esac
 }
 
 echo "arch: $(arch3xui)"
 
 os_version=""
-os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
+os_version=$(grep -i version_id /etc/os-release | cut -d '"' -f2 | cut -d . -f1)
 
 # Check OS version
 case "${release}" in
     centos)
         if [[ ${os_version} -lt 8 ]]; then
-            echo -e "${red} Please use CentOS 8 or higher ${plain}\n" && exit 1
+            echo -e "\033[0;31mPlease use CentOS 8 or higher \033[0m\n" >&2 && exit 1
         fi
         ;;
     ubuntu)
         if [[ ${os_version} -lt 20 ]]; then
-            echo -e "${red} Please use Ubuntu 20 or higher version!${plain}\n" && exit 1
+            echo -e "\033[0;31mPlease use Ubuntu 20 or higher version!\033[0m\n" >&2 && exit 1
         fi
         ;;
     fedora)
         if [[ ${os_version} -lt 36 ]]; then
-            echo -e "${red} Please use Fedora 36 or higher version!${plain}\n" && exit 1
+            echo -e "\033[0;31mPlease use Fedora 36 or higher version!\033[0m\n" >&2 && exit 1
         fi
         ;;
     debian)
         if [[ ${os_version} -lt 11 ]]; then
-            echo -e "${red} Please use Debian 11 or higher ${plain}\n" && exit 1
+            echo -e "\033[0;31mPlease use Debian 11 or higher \033[0m\n" >&2 && exit 1
         fi
         ;;
     almalinux)
         if [[ ${os_version} -lt 9 ]]; then
-            echo -e "${red} Please use AlmaLinux 9 or higher ${plain}\n" && exit 1
+            echo -e "\033[0;31mPlease use AlmaLinux 9 or higher \033[0m\n" >&2 && exit 1
         fi
         ;;
     rocky)
         if [[ ${os_version} -lt 9 ]]; then
-            echo -e "${red} Please use RockyLinux 9 or higher ${plain}\n" && exit 1
+            echo -e "\033[0;31mPlease use RockyLinux 9 or higher \033[0m\n" >&2 && exit 1
         fi
         ;;
     arch)
@@ -159,10 +159,9 @@ case "${release}" in
         echo "Your OS is Armbian"
         ;;
     *)
-        echo -e "${red}Failed to check the OS version, please contact the author!${plain}" && exit 1
+        echo -e "\033[0;31mFailed to check the OS version, please contact the author!\033[0m" >&2 && exit 1
         ;;
 esac
-
 # Install LAMP stack
 sudo apt install software-properties-common -y
 
