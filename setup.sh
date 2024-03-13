@@ -71,6 +71,7 @@ green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
+cur_dir=$(pwd)
 # Check root privilege
 if [ "$(id -u)" -ne 0 ]; then
     handle_error "Please run this script with root privilege"
@@ -111,7 +112,7 @@ arch3xui() {
     armv7* | armv7 | arm) echo 'armv7' ;;
     armv6* | armv6) echo 'armv6' ;;
     armv5* | armv5) echo 'armv5' ;;
-    *) echo -e "\033[0;31mUnsupported CPU architecture! \033[0m" >&2 && rm -f install.sh && exit 1 ;;
+    *) echo -e "\033[0;31mUnsupported CPU architecture! \033[0m" >&2 && rm -f setup.sh && exit 1 ;;
     esac
 }
 
@@ -225,64 +226,68 @@ if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
     sudo a2enconf phpmyadmin
     sudo systemctl restart apache2
 
+    if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
+    sudo apt install phpmyadmin -y
+
     # Create phpMyAdmin configuration file
     sudo tee /etc/apache2/conf-available/phpmyadmin.conf > /dev/null <<EOF
-        Alias /phpmyadmin /usr/share/phpmyadmin
-        <Directory /usr/share/phpmyadmin>
-            Options SymLinksIfOwnerMatch
-            DirectoryIndex index.php
-        
-            <IfModule mod_php5.c>
-                <IfModule mod_mime.c>
-                    AddType application/x-httpd-php .php
-                </IfModule>
-                <FilesMatch ".+\.php$">
-                    SetHandler application/x-httpd-php
-                </FilesMatch>
-        
-                php_flag magic_quotes_gpc Off
-                php_flag track_vars On
-                php_flag register_globals Off
-                php_admin_flag allow_url_fopen Off
-                php_value include_path .
-                php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
-                php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
-            </IfModule>
-            <IfModule mod_php7.c>
-                <IfModule mod_mime.c>
-                    AddType application/x-httpd-php .php
-                </IfModule>
-                <FilesMatch ".+\.php$">
-                    SetHandler application/x-httpd-php
-                </FilesMatch>
-        
-                php_flag magic_quotes_gpc Off
-                php_flag track_vars On
-                php_flag register_globals Off
-                php_flag short_open_tag On
-                php_flag register_argc_argv On
-                php_flag mbstring.func_overload 0
-                php_flag default_charset 'UTF-8'
-                php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
-                php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
-                php_admin_value session.save_path /var/lib/phpmyadmin/tmp
-            </IfModule>
-        
-        </Directory>
-        
-        # Disallow web access to directories that don't need it
-        <Directory /usr/share/phpmyadmin/templates>
-            Require all denied
-        </Directory>
-        <Directory /usr/share/phpmyadmin/libraries>
-            Require all denied
-        </Directory>
-        <Directory /usr/share/phpmyadmin/setup/lib>
-            Require all denied
-        </Directory>
-        EOF
+    Alias /phpmyadmin /usr/share/phpmyadmin
+    <Directory /usr/share/phpmyadmin>
+        Options SymLinksIfOwnerMatch
+        DirectoryIndex index.php
 
-    # Enable phpMyAdmin configuration
+        <IfModule mod_php5.c>
+            <IfModule mod_mime.c>
+                AddType application/x-httpd-php .php
+            </IfModule>
+            <FilesMatch ".+\.php$">
+                SetHandler application/x-httpd-php
+            </FilesMatch>
+
+            php_flag magic_quotes_gpc Off
+            php_flag track_vars On
+            php_flag register_globals Off
+            php_admin_flag allow_url_fopen Off
+            php_value include_path .
+            php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
+            php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
+        </IfModule>
+        <IfModule mod_php7.c>
+            <IfModule mod_mime.c>
+                AddType application/x-httpd-php .php
+            </IfModule>
+            <FilesMatch ".+\.php$">
+                SetHandler application/x-httpd-php
+            </FilesMatch>
+
+            php_flag magic_quotes_gpc Off
+            php_flag track_vars On
+            php_flag register_globals Off
+            php_flag short_open_tag On
+            php_flag register_argc_argv On
+            php_flag mbstring.func_overload 0
+            php_flag default_charset 'UTF-8'
+            php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
+            php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
+            php_admin_value session.save_path /var/lib/phpmyadmin/tmp
+        </IfModule>
+
+    </Directory>
+
+    # Disallow web access to directories that don't need it
+    <Directory /usr/share/phpmyadmin/templates>
+        Require all denied
+    </Directory>
+    <Directory /usr/share/phpmyadmin/libraries>
+        Require all denied
+    </Directory>
+    <Directory /usr/share/phpmyadmin/setup/lib>
+        Require all denied
+    </Directory>
+EOF
+
+# Create a symbolic link for Apache configuration
+    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
     sudo a2enconf phpmyadmin
     sudo systemctl restart apache2
 fi
@@ -305,12 +310,8 @@ echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
 # Update Apache configuration to point to the Laravel app
 sudo sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
 
-
-# Configure Apache virtual host for your Laravel project
-sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
-
-# Edit Apache virtual host configuration file
-sudo tee /etc/apache2/sites-available/gab-app.conf > /dev/null <<EOF
+# Configure Apache virtual host with user-provided domain or IP address
+cat <<EOF > /etc/apache2/sites-available/gab-app.conf
 <VirtualHost *:80>
     ServerName $server_domain
     ServerAdmin webmaster@localhost
@@ -349,3 +350,18 @@ echo -e "${green}Your MySQL database name, username, and password are saved in m
 # Inform user about successful installation
 echo -e "${green}Laravel has been successfully installed on your server!${plain}"
 echo "You can access your Laravel application at: http://$server_domain"
+
+cat <<EOF
+
+Please login to access the admin panel at:
+
+[http://$server_domain/admin/login](http://$server_domain/admin/login)
+
+- Email: admin@example.com
+- Password: admin123
+
+To log in as a customer, you can directly register as a customer and then log in at:
+
+[http://$server_domain/customer/register](http://$server_domain/customer/register)
+
+EOF
