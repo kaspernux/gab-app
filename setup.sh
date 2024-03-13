@@ -204,6 +204,7 @@ if ! command -v mysql >/dev/null; then
     GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION;
     FLUSH PRIVILEGES;
     MYSQL_SCRIPT
+
 fi
 
 # Check if phpMyAdmin is already installed
