@@ -37,7 +37,7 @@ check_conflicts() {
         sudo cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.backup || handle_error "Failed to backup MySQL configuration"
         echo "Backup created: /etc/mysql/mysql.conf.d/mysqld.cnf.backup"
         # Update MySQL configuration to point to the new Laravel app
-        sudo sed -i 's|/path/to/old/laravel|/var/www/html/gab-app|g' /etc/mysql/mysql.conf.d/mysqld.cnf
+        sudo sed -i 's|/var/www/html/gab-app|/var/www/html/gab-app|g' /etc/mysql/mysql.conf.d/mysqld.cnf
         sudo systemctl restart mysql || handle_error "Failed to restart MySQL"
     fi
 
@@ -84,7 +84,7 @@ check_conflicts
 set -e
 
 # Prompt user for server domain or IP address
-read -p "Enter server domain or IP address: " server_domain
+read -p "${green}*** Enter server domain or IP address:{plain} " server_domain
 
 # Check if the directory exists, if not, create it
 if [ ! -d "/var/www/html/gab-app" ]; then
@@ -166,6 +166,7 @@ case "${release}" in
         echo -e "\033[0;31mFailed to check the OS version, please contact the author!\033[0m" >&2 && exit 1
         ;;
 esac
+
 # Install LAMP stack
 sudo apt install software-properties-common -y
 
@@ -338,25 +339,18 @@ sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/sites-
 # Enable Apache virtual host for your Laravel project
 sudo a2ensite gab-app.conf
 
-# Disable the default Apache virtual host
-sudo a2dissite 000-default.conf
-
-# Restart Apache web server to apply changes
+# Restart Apache to apply changes
 sudo systemctl restart apache2
 
-# Install Laravel dependencies
-cd /var/www/html/gab-app
-composer install
+# Allow Apache through firewall
+sudo ufw allow 'Apache'
 
-# Generate Laravel application key
-php artisan key:generate
+# Inform user about MySQL credentials
+echo -e "${green}Your MySQL database name, username, and password are saved in mysql_credentials.txt${plain}"
 
-# Run database migrations and seeders
-php artisan migrate --seed
-
-# Display Laravel installation completion message
-echo -e "${green}Laravel application is installed and configured successfully!${plain}"
-echo -e "${green}You can now access your Laravel application${plain}"
+# Inform user about successful installation
+echo -e "${green}Laravel has been successfully installed on your server!${plain}"
+echo "You can access your Laravel application at: http://$server_domain"
 
 cat <<EOF
 
