@@ -23,22 +23,17 @@ check_conflicts() {
     echo "Checking for conflicting packages and old files..."
 
     # Check if Apache configuration file exists
-    if [ -f "/etc/apache2/apache2.conf" ]; then
-        echo "Apache configuration file already exists. Setting it to the new Laravel app..."
-        # Update Apache configuration to point to the new Laravel app
-        sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/apache2.conf
-        sudo systemctl restart apache2 || handle_error "Failed to restart Apache"
+    if [ -f "/etc/apache2/sites-available/gab-app.conf" ]; then
+        echo "Apache configuration file already exists. Creating a backup..."
+        # Create a backup of the existing Apache configuration file
+        backup_file "/etc/apache2/sites-available/gab-app.conf"
     fi
 
     # Check if MySQL configuration file exists
     if [ -f "/etc/mysql/mysql.conf.d/mysqld.cnf" ]; then
         echo "MySQL configuration file already exists. Creating a backup..."
         # Create a backup of the existing MySQL configuration file
-        sudo cp /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf.backup || handle_error "Failed to backup MySQL configuration"
-        echo "Backup created: /etc/mysql/mysql.conf.d/mysqld.cnf.backup"
-        # Update MySQL configuration to point to the new Laravel app
-        sudo sed -i 's|/var/www/html/gab-app|/var/www/html/gab-app|g' /etc/mysql/mysql.conf.d/mysqld.cnf
-        sudo systemctl restart mysql || handle_error "Failed to restart MySQL"
+        backup_file "/etc/mysql/mysql.conf.d/mysqld.cnf"
     fi
 
     # Check if old Laravel project directory exists
@@ -191,42 +186,14 @@ fi
 # Check if MySQL is already installed
 if ! command -v mysql >/dev/null; then
     sudo apt install mysql-server -y
+    sudo mysql_secure_installation
     sudo systemctl start mysql
     sudo systemctl enable mysql
-
-    # Define MySQL credentials for Laravel
-    MYSQL_LARAVEL_DB="gab_app"
-    MYSQL_LARAVEL_USER="gab_app_user"
-    MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
-    
-    # Save MySQL credentials to a text file
-    echo "Laravel database: ${MYSQL_LARAVEL_DB}" > mysql_credentials.txt
-    echo "Laravel database user: ${MYSQL_LARAVEL_USER}" >> mysql_credentials.txt
-    echo "Laravel database password: ${MYSQL_LARAVEL_PASSWORD}" >> mysql_credentials.txt
-    
-    # Create MySQL database and user for Laravel
-    sudo mysql -e \
-    "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
-    CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
-    GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
-    FLUSH PRIVILEGES;"
-    
-    # Append MySQL credentials to Laravel .env file
-    echo "DB_DATABASE=${MYSQL_LARAVEL_DB}" >> /var/www/html/gab-app/.env
-    echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
-    echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
-
+  
 fi
 
+
 if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
-    sudo apt install phpmyadmin -y
-
-    # Create a symbolic link for Apache configuration
-    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
-    sudo a2enconf phpmyadmin
-    sudo systemctl restart apache2
-
-    if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
     sudo apt install phpmyadmin -y
 
     # Create phpMyAdmin configuration file
@@ -236,7 +203,7 @@ if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
         Options SymLinksIfOwnerMatch
         DirectoryIndex index.php
 
-        <IfModule mod_php5.c>
+        <IfModule mod_php.c>
             <IfModule mod_mime.c>
                 AddType application/x-httpd-php .php
             </IfModule>
@@ -247,11 +214,12 @@ if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
             php_flag magic_quotes_gpc Off
             php_flag track_vars On
             php_flag register_globals Off
-            php_admin_flag allow_url_fopen Off
+            php_flag allow_url_fopen Off
             php_value include_path .
             php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
             php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
         </IfModule>
+
         <IfModule mod_php7.c>
             <IfModule mod_mime.c>
                 AddType application/x-httpd-php .php
@@ -287,66 +255,102 @@ if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
 EOF
 
     # Create a symbolic link for Apache configuration
-        sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
-        sudo a2enconf phpmyadmin
-        sudo systemctl restart apache2
-    fi
+    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+    sudo a2enconf phpmyadmin
+    sudo systemctl restart apache2
 fi
 
-# Install Laravel
-cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
-composer create-project --prefer-dist laravel/laravel .
-sudo chown -R www-data:www-data /var/www/html/gab-app
-sudo chmod -R 755 /var/www/html/gab-app/storage
-sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
-
-# Embed database credentials into Laravel .env file
-echo "DB_CONNECTION=mysql" >> /var/www/html/gab-app/.env
-echo "DB_HOST=127.0.0.1" >> /var/www/html/gab-app/.env
-echo "DB_PORT=3306" >> /var/www/html/gab-app/.env
-echo "DB_DATABASE=${MYSQL_LARAVEL_DB}" >> /var/www/html/gab-app/.env
-echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
-echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
-
-# Configure Apache virtual host for your Laravel project
-sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
-
-# Edit Apache virtual host configuration file
-sudo tee /etc/apache2/sites-available/gab-app.conf > /dev/null <<EOF
+# Check if Apache virtual host configuration exists, if not, create it
+if [ ! -f "/etc/apache2/sites-available/gab-app.conf" ]; then
+    cat >"/etc/apache2/sites-available/gab-app.conf" <<EOF
 <VirtualHost *:80>
-    ServerName $server_domain
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/html/gab-app/public
-
     <Directory /var/www/html/gab-app>
+        Options -Indexes +FollowSymLinks +MultiViews
         AllowOverride All
+        Require all granted
     </Directory>
-
     ErrorLog \${APACHE_LOG_DIR}/error.log
     CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
+    echo "Apache virtual host configuration created"
+fi
 
-# Backup Apache virtual host configuration
-backup_file "/etc/apache2/sites-available/gab-app.conf"
+# Install Laravel
+if [ ! -f "/var/www/html/gab-app/composer.json" ]; then
+    cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
+    composer create-project --prefer-dist laravel/laravel .
+    composer install
+    cp .env.example .env
+    php artisan key:generate
+    sudo chown -R www-data:www-data /var/www/html/gab-app
+    sudo chown -R www-data:www-data /var/www/html/gab-app
+    sudo chmod -R 755 /var/www/html/gab-app/storage
+    sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
 
-# Configure Apache virtual host for your Laravel project
-sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
+    # Define MySQL credentials for Laravel
+    MYSQL_LARAVEL_DB="gab_app"
+    MYSQL_LARAVEL_USER="gab_app_user"
+    MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
 
-# Edit Apache virtual host configuration file
-sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
+    # Create mysql-credentials.txt inside the gab-app folder
+    sudo tee /root/mysql-credentials.txt > /dev/null <<EOF
+    MySQL Database: ${MYSQL_LARAVEL_DB}
+    MySQL User: ${MYSQL_LARAVEL_USER}
+    MySQL Password: ${MYSQL_LARAVEL_PASSWORD}
+EOF
+    # Create MySQL database and user for GAB-APP
+    sudo mysql -e \
+    "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
+    CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
+    GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
+    FLUSH PRIVILEGES;"
+ 
+    # Embed database credentials into Laravel .env file
+    sudo sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
+    sudo sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /var/www/html/gab-app/.env
+    sudo sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /var/www/html/gab-app/.env
 
-# Enable Apache virtual host for your Laravel project
-sudo a2ensite gab-app.conf
 
-# Restart Apache to apply changes
-sudo systemctl restart apache2
+    # Configure Apache virtual host for your Laravel project
+    sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
 
-# Allow Apache through firewall
-sudo ufw allow 'Apache'
+    # Backup Apache virtual host configuration
+    backup_file "/etc/apache2/sites-available/gab-app.conf"
+
+    # Configure Apache virtual host for your Laravel project
+    sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
+
+    # Edit Apache virtual host configuration file
+    sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
+
+    # Enable Apache virtual host for your Laravel project
+    sudo a2ensite gab-app.conf
+
+    # Disable the default Apache virtual host
+    sudo a2dissite 000-default.conf
+
+    # Restart Apache to apply changes
+    sudo systemctl restart apache2
+
+    # Allow Apache through firewall
+    sudo ufw allow 'Apache'
+
+    # Update MySQL configuration to point to the new Laravel app directory
+    sudo sed -i "s|/var/lib/mysql|/var/www/html/gab-app/mysql|g" /etc/mysql/mysql.conf.d/mysqld.cnf
+
+    # Restart MySQL service
+    sudo systemctl restart mysql
+
+fi
 
 # Inform user about MySQL credentials
-echo -e "${green}Your MySQL database name, username, and password are saved in mysql_credentials.txt${plain}"
+echo -e "\e[32mMySQL Database: $MYSQL_LARAVEL_DB\e[0m"
+echo -e "\e[32mMySQL User: $MYSQL_LARAVEL_USER\e[0m"
+echo -e "\e[32mMySQL Password: $MYSQL_LARAVEL_PASSWORD\e[0m"
+echo "MySQL credentials saved to mysql-credentials.txt"
 
 # Inform user about successful installation
 echo -e "${green}Laravel has been successfully installed on your server!${plain}"
@@ -356,7 +360,7 @@ cat <<EOF
 
 Please login to access the admin panel at:
 
-[http://$server_domain/admin/login](http://$server_domain/admin/login)
+[http://$server_domain:80](http://$server_domain)
 
 - Email: admin@example.com
 - Password: admin123
