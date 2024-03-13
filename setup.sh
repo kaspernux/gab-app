@@ -200,13 +200,19 @@ if ! command -v mysql >/dev/null; then
     echo "Laravel database: ${MYSQL_LARAVEL_DB}" >> mysql_password.txt
     echo "Laravel database user: ${MYSQL_LARAVEL_USER}" >> mysql_password.txt
     echo "Laravel database password: ${MYSQL_LARAVEL_PASSWORD}" >> mysql_password.txt
-
     
+    # Create MySQL database and user for Laravel
     sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
     "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
     CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
     GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
     FLUSH PRIVILEGES;"
+    
+    # Retrieve MySQL database credentials and update Laravel .env file
+    echo "DB_DATABASE=${MYSQL_LARAVEL_DB}" >> /var/www/html/gab-app/.env
+    echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
+    echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
+
 fi
 
 # Check if phpMyAdmin is already installed
