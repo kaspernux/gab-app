@@ -165,135 +165,63 @@ esac
 # Install LAMP stack
 sudo apt install software-properties-common -y
 
-# Check if Apache is installed
-apache2 -v &>/dev/null
-APACHE_INSTALLED=$?
-
-# Check if MySQL is installed
-mysql --version &>/dev/null
-MYSQL_INSTALLED=$?
-
-# Check if PHP is installed
-php -v &>/dev/null
-PHP_INSTALLED=$?
-
-# Check if Composer is installed
-composer -v &>/dev/null
-COMPOSER_INSTALLED=$?
-
-# Check if Node.js is installed
-node -v &>/dev/null
-NODE_INSTALLED=$?
-
-# Check if NPM is installed
-npm -v &>/dev/null
-NPM_INSTALLED=$?
-
-# Check if Git is installed
-git --version &>/dev/null
-GIT_INSTALLED=$?
-
-# Check if necessary packages are installed
-if [ $APACHE_INSTALLED -eq 0 ]; then
-    echo -e "${red}Apache is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green}Installing Apache...${plain}"
-    # Install Apache
+# Check if PHP is already installed
+if ! command -v php >/dev/null; then
     sudo apt update
-    sudo apt install -y apache2
-    
-    # Enable Apache modules
+    sudo apt install php php-{bcmath,bz2,intl,gd,mbstring,mysql,zip} unzip -y
+fi
+
+# Check if Composer is already installed
+if ! command -v composer >/dev/null; then
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer && php -r "unlink('composer-setup.php');"
+fi
+
+# Check if Apache is already installed
+if ! command -v apache2 >/dev/null; then
+    sudo apt install apache2 -y
     sudo a2enmod rewrite
     sudo systemctl restart apache2
 fi
 
-if [ $MYSQL_INSTALLED -eq 0 ]; then
-    echo -e "${red} MySQL Server is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green} Installing MySQL Server...${plain}"
-    # Install MySQL
+# Check if MySQL is already installed
+if ! command -v mysql >/dev/null; then
     sudo apt install mysql-server -y
-    sudo mysql_secure_installation
-fi
+    sudo systemctl start mysql
+    sudo systemctl enable mysql
 
-if [ $PHP_INSTALLED -eq 0 ]; then
-    echo -e "${red} PHP is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green} Installing PHP and required extensions...${plain}"
-    # Add repository for latest PHP version
-    sudo add-apt-repository ppa:ondrej/php -y
-    sudo apt update
+    # Create MySQL database and user for Laravel
+    MYSQL_ROOT_PASSWORD=$(openssl rand -base64 12)
+    MYSQL_LARAVEL_DB="gab_app"
+    MYSQL_LARAVEL_USER="gab_app_user"
+    MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
     
-    # Install the latest PHP version and required extensions
-    sudo apt install php php-fpm php-mysql php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl -y
+    # Save MySQL password to a text file
+    echo "MySQL root password: ${MYSQL_ROOT_PASSWORD}" > mysql_password.txt
     
-    # Retrieve server timezone
-    SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
-    
-    # Replace placeholder with server timezone in PHP configuration
-    sudo sed -i "s|date.timezone = \"Your/Timezone\"|date.timezone = \"${SERVER_TIMEZONE}\"|" /etc/php/{VERSION}/apache2/php.ini
+    sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<MYSQL_SCRIPT
+    CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
+    CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}';
+    GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION;
+    FLUSH PRIVILEGES;
+    MYSQL_SCRIPT
 fi
 
-if [ $COMPOSER_INSTALLED -eq 0 ]; then
-    echo -e "${red} Composer is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green} Installing Composer...${plain}"
-    # Install Composer
-    sudo apt update
-    sudo apt install composer -y
+# Check if phpMyAdmin is already installed
+if ! [ -f "/etc/phpmyadmin/config.inc.php" ]; then
+    sudo apt install phpmyadmin -y
+
+    # Create a symbolic link
+    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+    sudo a2enconf phpmyadmin
+    sudo systemctl restart apache2
 fi
 
-if [ $NODE_INSTALLED -eq 0 ]; then
-    echo -e "${red} Node.js is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green} Installing Node.js...${plain}"
-    # Install Node.js
-    sudo apt update
-    sudo apt install -y nodejs
-fi
-
-if [ $NPM_INSTALLED -eq 0 ]; then
-    echo -e "${red} NPM is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green} Installing NPM...${plain}"
-    # Install NPM
-    sudo apt update
-    sudo apt install -y npm
-fi
-
-if [ $GIT_INSTALLED -eq 0 ]; then
-    echo -e "${red} Git is already installed. Skipping installation.${plain}"
-else
-    echo -e "${green} Installing Git...${plain}"
-    # Install Git
-    sudo apt update
-    sudo apt install -y git
-fi
-
-# Install phpMyAdmin
-sudo apt update
-sudo apt install phpmyadmin -y
-
-# Configure phpMyAdmin for Apache
-sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
-sudo a2enconf phpmyadmin
-sudo systemctl reload apache2
-
-# Create MySQL database and user for Laravel
-MYSQL_ROOT_PASSWORD=$(openssl rand -base64 12)
-MYSQL_LARAVEL_DB="gab_app"
-MYSQL_LARAVEL_USER="gab_app_user"
-MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
-
-# Save MySQL password to a text file
-echo "MySQL root password: ${MYSQL_ROOT_PASSWORD}" > mysql_password.txt
-
-sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<MYSQL_SCRIPT
-CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB};
-CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-MYSQL_SCRIPT
+# Install Laravel
+cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
+composer create-project --prefer-dist laravel/laravel .
+sudo chown -R www-data:www-data /var/www/html/gab-app
+sudo chmod -R 755 /var/www/html/gab-app/storage
+sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
 
 # Update Laravel application's .env file with MySQL database configuration
 sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
@@ -325,18 +253,6 @@ EOF
 # Backup Apache virtual host configuration
 backup_file "/etc/apache2/sites-available/gab-app.conf"
 
-# Navigate to the web server root directory
-cd /var/www/html
-
-# Create a new Laravel project
-composer create-project laravel/laravel:^10.0 gab-app --prefer-dist
-
-# Change ownership of Laravel project directory to Apache user
-sudo chown -R www-data:www-data /var/www/html/gab-app
-
-# Set proper permissions for Laravel project directory
-sudo chmod -R 755 /var/www/html/gab-app/storage
-
 # Configure Apache virtual host for your Laravel project
 sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
 
@@ -362,18 +278,13 @@ php artisan key:generate
 # Run database migrations and seeders
 php artisan migrate --seed
 
-# Set proper permissions for Laravel project directory after installation
-sudo chmod -R 755 /var/www/html/gab-app/storage
-sudo chmod -R 755 /var/www/html/gab-app/bootstrap/cache
-
 # Display Laravel installation completion message
 echo -e "${green}Laravel application is installed and configured successfully!${plain}"
 echo -e "${green}You can now access your Laravel application${plain}"
-cat <<EOF
 
 cat <<EOF
 
-You can access the admin panel at:
+Please login to access the admin panel at:
 
 [http://$server_domain/admin/login](http://$server_domain/admin/login)
 
