@@ -84,7 +84,7 @@ check_conflicts
 set -e
 
 # Prompt user for server domain or IP address
-read -p $'\e[32mEnter server domain or IP address:\e[0m' server_domain
+read -p $'\e[32mEnter server domain or IP address:\e[0m ' server_domain
 
 # Check if the directory exists, if not, create it
 if [ ! -d "/var/www/html/gab-app" ]; then
@@ -106,12 +106,12 @@ echo "The OS release is: $release"
 
 arch3xui() {
     case "$(uname -m)" in
-    x86_64 | x64 | amd64) echo 'amd64' ;;
-    i*86 | x86) echo '386' ;;
-    armv8* | armv8 | arm64 | aarch64) echo 'arm64' ;;
-    armv7* | armv7 | arm) echo 'armv7' ;;
-    armv6* | armv6) echo 'armv6' ;;
-    armv5* | armv5) echo 'armv5' ;;
+    x86_64 | x64 | amd64) printf 'amd64' ;;
+    i*86 | x86) printf '386' ;;
+    armv8* | armv8 | arm64 | aarch64) printf 'arm64' ;;
+    armv7* | armv7 | arm) printf 'armv7' ;;
+    armv6* | armv6) printf 'armv6' ;;
+    armv5* | armv5) printf 'armv5' ;;
     *) echo -e "\033[0;31mUnsupported CPU architecture! \033[0m" >&2 && rm -f setup.sh && exit 1 ;;
     esac
 }
@@ -360,8 +360,6 @@ Please login to access the admin panel at:
 - Email: admin@example.com
 - Password: admin123
 
-To log in as a customer, you can directly register as a customer and then log in at:
-
-[http://$server_domain/customer/register](http://$server_domain/customer/register)
+Don't forget to change the email and password after login!
 
 EOF
