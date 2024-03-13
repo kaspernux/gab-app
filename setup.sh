@@ -165,34 +165,107 @@ esac
 # Install LAMP stack
 sudo apt install software-properties-common -y
 
-# Check if PHP is already installed
-if ! command -v php >/dev/null; then
+# Check if Apache is installed
+apache2 -v &>/dev/null
+APACHE_INSTALLED=$?
+
+# Check if MySQL is installed
+mysql --version &>/dev/null
+MYSQL_INSTALLED=$?
+
+# Check if PHP is installed
+php -v &>/dev/null
+PHP_INSTALLED=$?
+
+# Check if Composer is installed
+composer -v &>/dev/null
+COMPOSER_INSTALLED=$?
+
+# Check if Node.js is installed
+node -v &>/dev/null
+NODE_INSTALLED=$?
+
+# Check if NPM is installed
+npm -v &>/dev/null
+NPM_INSTALLED=$?
+
+# Check if Git is installed
+git --version &>/dev/null
+GIT_INSTALLED=$?
+
+if [ $PHP_INSTALLED -eq 0 ]; then
+    echo -e "${red}PHP is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing PHP and required extensions...${plain}"
+    # Add repository for latest PHP version
+    sudo add-apt-repository ppa:ondrej/php -y
     sudo apt update
-    sudo apt install php php-{bcmath,bz2,intl,gd,mbstring,mysql,zip} unzip -y
+    
+    # Install the latest PHP version and required extensions
+    sudo apt install -y php php-fpm php-mysql php-bcmath php-common php-mbstring php-xmlrpc php-soap php-gd php-xml php-cli php-zip php-curl php-bz2 php-intl unzip
+    
+    # Retrieve server timezone
+    SERVER_TIMEZONE=$(timedatectl | grep "Time zone" | awk '{print $3}')
+    
+    # Replace placeholder with server timezone in PHP configuration
+    sudo sed -i "s|;date.timezone =|date.timezone = \"${SERVER_TIMEZONE}\"|" /etc/php/{VERSION}/apache2/php.ini
 fi
 
-# Check if Composer is already installed
-if ! command -v composer >/dev/null; then
-    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer && php -r "unlink('composer-setup.php');"
-fi
-
-# Check if Apache is already installed
-if ! command -v apache2 >/dev/null; then
+# Check if necessary packages are installed
+if [ $APACHE_INSTALLED -eq 0 ]; then
+    echo -e "${red}Apache is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing Apache...${plain}"
     sudo apt install apache2 -y
     sudo a2enmod rewrite
     sudo systemctl restart apache2
 fi
 
-# Check if MySQL is already installed
-if ! command -v mysql >/dev/null; then
+if [ $COMPOSER_INSTALLED -eq 0 ]; then
+    echo -e "${red}Composer is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing Composer...${plain}"
+    # Install Composer
+    sudo apt update
+    sudo apt install -y composer
+fi
+
+if [ $NODE_INSTALLED -eq 0 ]; then
+    echo -e "${red}Node.js is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing Node.js...${plain}"
+    # Install Node.js
+    sudo apt update
+    sudo apt install -y nodejs
+fi
+
+if [ $NPM_INSTALLED -eq 0 ]; then
+    echo -e "${red}NPM is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing NPM...${plain}"
+    # Install NPM
+    sudo apt update
+    sudo apt install -y npm
+fi
+
+if [ $GIT_INSTALLED -eq 0 ]; then
+    echo -e "${red}Git is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing Git...${plain}"
+    # Install Git
+    sudo apt update
+    sudo apt install -y git
+fi
+
+if [ $MYSQL_INSTALLED -eq 0 ]; then
+    echo -e "${red}MySQL Server is already installed. Skipping installation.${plain}"
+else
+    echo -e "${green}Installing MySQL Server...${plain}"
     sudo apt install mysql-server -y
     sudo mysql_secure_installation
     sudo systemctl start mysql
-    sudo systemctl enable mysql
-  
+    sudo systemctl enable mysql 
 fi
-
-
 if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
     sudo apt install phpmyadmin -y
 
@@ -324,7 +397,7 @@ EOF
     sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
 
     # Edit Apache virtual host configuration file
-    sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
+    sudo sed -i 's#/var/www/html#/var/www/html/gab-app/public#g' /etc/apache2/sites-available/gab-app.conf
 
     # Enable Apache virtual host for your Laravel project
     sudo a2ensite gab-app.conf
@@ -344,6 +417,13 @@ EOF
     # Restart MySQL service
     sudo systemctl restart mysql
 
+    cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
+    composer dump-autoload
+    php artisan db:seed
+    php artisan migrate
+    php artisan vendor:publish --all
+    php artisan optimize
+    php artisan serve
 fi
 
 # Inform user about MySQL credentials
