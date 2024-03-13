@@ -217,8 +217,6 @@ if ! command -v mysql >/dev/null; then
 
 fi
 
-
-# Check if phpMyAdmin is already installed
 if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
     sudo apt install phpmyadmin -y
 
@@ -229,60 +227,60 @@ if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
 
     # Create phpMyAdmin configuration file
     sudo tee /etc/apache2/conf-available/phpmyadmin.conf > /dev/null <<EOF
-    Alias /phpmyadmin /usr/share/phpmyadmin
-    <Directory /usr/share/phpmyadmin>
-        Options SymLinksIfOwnerMatch
-        DirectoryIndex index.php
-    
-        <IfModule mod_php5.c>
-            <IfModule mod_mime.c>
-                AddType application/x-httpd-php .php
+        Alias /phpmyadmin /usr/share/phpmyadmin
+        <Directory /usr/share/phpmyadmin>
+            Options SymLinksIfOwnerMatch
+            DirectoryIndex index.php
+        
+            <IfModule mod_php5.c>
+                <IfModule mod_mime.c>
+                    AddType application/x-httpd-php .php
+                </IfModule>
+                <FilesMatch ".+\.php$">
+                    SetHandler application/x-httpd-php
+                </FilesMatch>
+        
+                php_flag magic_quotes_gpc Off
+                php_flag track_vars On
+                php_flag register_globals Off
+                php_admin_flag allow_url_fopen Off
+                php_value include_path .
+                php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
+                php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
             </IfModule>
-            <FilesMatch ".+\.php$">
-                SetHandler application/x-httpd-php
-            </FilesMatch>
-    
-            php_flag magic_quotes_gpc Off
-            php_flag track_vars On
-            php_flag register_globals Off
-            php_admin_flag allow_url_fopen Off
-            php_value include_path .
-            php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
-            php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
-        </IfModule>
-        <IfModule mod_php7.c>
-            <IfModule mod_mime.c>
-                AddType application/x-httpd-php .php
+            <IfModule mod_php7.c>
+                <IfModule mod_mime.c>
+                    AddType application/x-httpd-php .php
+                </IfModule>
+                <FilesMatch ".+\.php$">
+                    SetHandler application/x-httpd-php
+                </FilesMatch>
+        
+                php_flag magic_quotes_gpc Off
+                php_flag track_vars On
+                php_flag register_globals Off
+                php_flag short_open_tag On
+                php_flag register_argc_argv On
+                php_flag mbstring.func_overload 0
+                php_flag default_charset 'UTF-8'
+                php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
+                php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
+                php_admin_value session.save_path /var/lib/phpmyadmin/tmp
             </IfModule>
-            <FilesMatch ".+\.php$">
-                SetHandler application/x-httpd-php
-            </FilesMatch>
-    
-            php_flag magic_quotes_gpc Off
-            php_flag track_vars On
-            php_flag register_globals Off
-            php_flag short_open_tag On
-            php_flag register_argc_argv On
-            php_flag mbstring.func_overload 0
-            php_flag default_charset 'UTF-8'
-            php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
-            php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
-            php_admin_value session.save_path /var/lib/phpmyadmin/tmp
-        </IfModule>
-    
-    </Directory>
-    
-    # Disallow web access to directories that don't need it
-    <Directory /usr/share/phpmyadmin/templates>
-        Require all denied
-    </Directory>
-    <Directory /usr/share/phpmyadmin/libraries>
-        Require all denied
-    </Directory>
-    <Directory /usr/share/phpmyadmin/setup/lib>
-        Require all denied
-    </Directory>
-    EOF
+        
+        </Directory>
+        
+        # Disallow web access to directories that don't need it
+        <Directory /usr/share/phpmyadmin/templates>
+            Require all denied
+        </Directory>
+        <Directory /usr/share/phpmyadmin/libraries>
+            Require all denied
+        </Directory>
+        <Directory /usr/share/phpmyadmin/setup/lib>
+            Require all denied
+        </Directory>
+        EOF
 
     # Enable phpMyAdmin configuration
     sudo a2enconf phpmyadmin
