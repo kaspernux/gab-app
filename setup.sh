@@ -71,7 +71,6 @@ green='\033[0;32m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-cur_dir=$(pwd)
 # Check root privilege
 if [ "$(id -u)" -ne 0 ]; then
     handle_error "Please run this script with root privilege"
@@ -84,7 +83,7 @@ check_conflicts
 set -e
 
 # Prompt user for server domain or IP address
-read -p "Enter server domain or IP address:" server_domain
+read -p $'\e[32mEnter server domain or IP address:\e[0m' server_domain
 
 # Check if the directory exists, if not, create it
 if [ ! -d "/var/www/html/gab-app" ]; then
@@ -306,49 +305,14 @@ echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
 echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
 
 # Update Apache configuration to point to the Laravel app
-sudo sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
+sudo sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g' /etc/apache2/sites-available/000-default.conf
 
-# Restart Apache to apply changes
+# Enable Apache rewrite module and restart Apache
+sudo a2enmod rewrite
 sudo systemctl restart apache2
 
-# Configure Apache virtual host with user-provided domain or IP address
-cat <<EOF > /etc/apache2/sites-available/gab-app.conf
-<VirtualHost *:80>
-    ServerName $server_domain
-    ServerAdmin webmaster@localhost
-    DocumentRoot /var/www/html/gab-app/public
-
-    <Directory /var/www/html/gab-app>
-        AllowOverride All
-    </Directory>
-
-    ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-EOF
-
-
-# Backup Apache virtual host configuration
-backup_file "/etc/apache2/sites-available/gab-app.conf"
-
-# Configure Apache virtual host for your Laravel project
-sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
-
-# Edit Apache virtual host configuration file
-sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
-
-# Enable Apache virtual host for your Laravel project
-sudo a2ensite gab-app.conf
-
-# Restart Apache to apply changes
-sudo systemctl restart apache2
-
-# Allow Apache through firewall
-sudo ufw allow 'Apache'
-
-# Inform user about MySQL credentials
-echo -e "${green}Your MySQL database name, username, and password are saved in mysql_credentials.txt${plain}"
-
-# Inform user about successful installation
-echo -e "${green}Laravel has been successfully installed on your server!${plain}"
-echo "You can access your Laravel application at: http://$server_domain"
+# Provide instructions to the user
+echo -e "${green}Laravel installation completed successfully.${plain}"
+echo -e "Your Laravel app is accessible at: ${green}http://$server_domain${plain}"
+echo -e "phpMyAdmin is accessible at: ${green}http://$server_domain/phpmyadmin${plain}"
+echo -e "MySQL credentials have been saved to ${green}mysql_credentials.txt${plain}"
