@@ -193,38 +193,98 @@ if ! command -v mysql >/dev/null; then
     sudo systemctl start mysql
     sudo systemctl enable mysql
 
-    # Create MySQL database and user for Laravel
-    MYSQL_ROOT_PASSWORD=$(openssl rand -base64 12)
+    # Define MySQL credentials for Laravel
     MYSQL_LARAVEL_DB="gab_app"
     MYSQL_LARAVEL_USER="gab_app_user"
     MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
     
     # Save MySQL credentials to a text file
-    echo "MySQL root password: ${MYSQL_ROOT_PASSWORD}" > mysql_password.txt
-    echo "Laravel database: ${MYSQL_LARAVEL_DB}" >> mysql_password.txt
-    echo "Laravel database user: ${MYSQL_LARAVEL_USER}" >> mysql_password.txt
-    echo "Laravel database password: ${MYSQL_LARAVEL_PASSWORD}" >> mysql_password.txt
+    echo "Laravel database: ${MYSQL_LARAVEL_DB}" > mysql_credentials.txt
+    echo "Laravel database user: ${MYSQL_LARAVEL_USER}" >> mysql_credentials.txt
+    echo "Laravel database password: ${MYSQL_LARAVEL_PASSWORD}" >> mysql_credentials.txt
     
     # Create MySQL database and user for Laravel
-    sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
+    sudo mysql -e \
     "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
     CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
     GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
     FLUSH PRIVILEGES;"
     
-    # Retrieve MySQL database credentials and update Laravel .env file
+    # Append MySQL credentials to Laravel .env file
     echo "DB_DATABASE=${MYSQL_LARAVEL_DB}" >> /var/www/html/gab-app/.env
     echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
     echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
 
 fi
 
+
 # Check if phpMyAdmin is already installed
-if ! [ -f "/etc/phpmyadmin/config.inc.php" ]; then
+if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
     sudo apt install phpmyadmin -y
 
-    # Create a symbolic link
+    # Create a symbolic link for Apache configuration
     sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+    sudo a2enconf phpmyadmin
+    sudo systemctl restart apache2
+
+    # Create phpMyAdmin configuration file
+    sudo tee /etc/apache2/conf-available/phpmyadmin.conf > /dev/null <<EOF
+    Alias /phpmyadmin /usr/share/phpmyadmin
+    <Directory /usr/share/phpmyadmin>
+        Options SymLinksIfOwnerMatch
+        DirectoryIndex index.php
+    
+        <IfModule mod_php5.c>
+            <IfModule mod_mime.c>
+                AddType application/x-httpd-php .php
+            </IfModule>
+            <FilesMatch ".+\.php$">
+                SetHandler application/x-httpd-php
+            </FilesMatch>
+    
+            php_flag magic_quotes_gpc Off
+            php_flag track_vars On
+            php_flag register_globals Off
+            php_admin_flag allow_url_fopen Off
+            php_value include_path .
+            php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
+            php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
+        </IfModule>
+        <IfModule mod_php7.c>
+            <IfModule mod_mime.c>
+                AddType application/x-httpd-php .php
+            </IfModule>
+            <FilesMatch ".+\.php$">
+                SetHandler application/x-httpd-php
+            </FilesMatch>
+    
+            php_flag magic_quotes_gpc Off
+            php_flag track_vars On
+            php_flag register_globals Off
+            php_flag short_open_tag On
+            php_flag register_argc_argv On
+            php_flag mbstring.func_overload 0
+            php_flag default_charset 'UTF-8'
+            php_admin_value open_basedir /usr/share/phpmyadmin/:/etc/phpmyadmin/:/var/lib/phpmyadmin/:/usr/share/php/php-gettext/:/usr/share/javascript/
+            php_admin_value upload_tmp_dir /var/lib/phpmyadmin/tmp
+            php_admin_value session.save_path /var/lib/phpmyadmin/tmp
+        </IfModule>
+    
+    </Directory>
+    
+    # Disallow web access to directories that don't need it
+    <Directory /usr/share/phpmyadmin/templates>
+        Require all denied
+    </Directory>
+    <Directory /usr/share/phpmyadmin/libraries>
+        Require all denied
+    </Directory>
+    <Directory /usr/share/phpmyadmin/setup/lib>
+        Require all denied
+    </Directory>
+    EOF
+
+    # Enable phpMyAdmin configuration
     sudo a2enconf phpmyadmin
     sudo systemctl restart apache2
 fi
