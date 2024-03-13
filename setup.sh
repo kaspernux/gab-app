@@ -327,6 +327,7 @@ cat <<EOF > /etc/apache2/sites-available/gab-app.conf
 </VirtualHost>
 EOF
 
+
 # Backup Apache virtual host configuration
 backup_file "/etc/apache2/sites-available/gab-app.conf"
 
