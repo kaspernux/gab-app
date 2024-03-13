@@ -307,11 +307,11 @@ echo "DB_DATABASE=${MYSQL_LARAVEL_DB}" >> /var/www/html/gab-app/.env
 echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
 echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
 
-# Update Apache configuration to point to the Laravel app
-sudo sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
+# Configure Apache virtual host for your Laravel project
+sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
 
-# Configure Apache virtual host with user-provided domain or IP address
-cat <<EOF > /etc/apache2/sites-available/gab-app.conf
+# Edit Apache virtual host configuration file
+sudo tee /etc/apache2/sites-available/gab-app.conf > /dev/null <<EOF
 <VirtualHost *:80>
     ServerName $server_domain
     ServerAdmin webmaster@localhost
