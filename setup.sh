@@ -195,8 +195,12 @@ if ! command -v mysql >/dev/null; then
     MYSQL_LARAVEL_USER="gab_app_user"
     MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
     
-    # Save MySQL password to a text file
+    # Save MySQL credentials to a text file
     echo "MySQL root password: ${MYSQL_ROOT_PASSWORD}" > mysql_password.txt
+    echo "Laravel database: ${MYSQL_LARAVEL_DB}" >> mysql_password.txt
+    echo "Laravel database user: ${MYSQL_LARAVEL_USER}" >> mysql_password.txt
+    echo "Laravel database password: ${MYSQL_LARAVEL_PASSWORD}" >> mysql_password.txt
+
     
     sudo mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e \
     "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
