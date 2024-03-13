@@ -303,14 +303,48 @@ echo "DB_USERNAME=${MYSQL_LARAVEL_USER}" >> /var/www/html/gab-app/.env
 echo "DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}" >> /var/www/html/gab-app/.env
 
 # Update Apache configuration to point to the Laravel app
-sudo sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g' /etc/apache2/sites-available/000-default.conf
+sudo sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
 
-# Enable Apache rewrite module and restart Apache
-sudo a2enmod rewrite
+# Restart Apache to apply changes
 sudo systemctl restart apache2
 
-# Provide instructions to the user
-echo -e "${green}Laravel installation completed successfully.${plain}"
-echo -e "Your Laravel app is accessible at: ${green}http://$server_domain${plain}"
-echo -e "phpMyAdmin is accessible at: ${green}http://$server_domain/phpmyadmin${plain}"
-echo -e "MySQL credentials have been saved to ${green}mysql_credentials.txt${plain}"
+# Configure Apache virtual host with user-provided domain or IP address
+cat <<EOF > /etc/apache2/sites-available/gab-app.conf
+<VirtualHost *:80>
+    ServerName $server_domain
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html/gab-app/public
+
+    <Directory /var/www/html/gab-app>
+        AllowOverride All
+    </Directory>
+
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+EOF
+
+# Backup Apache virtual host configuration
+backup_file "/etc/apache2/sites-available/gab-app.conf"
+
+# Configure Apache virtual host for your Laravel project
+sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
+
+# Edit Apache virtual host configuration file
+sudo sed -i 's|/var/www/html|/var/www/html/gab-app/public|g' /etc/apache2/sites-available/gab-app.conf
+
+# Enable Apache virtual host for your Laravel project
+sudo a2ensite gab-app.conf
+
+# Restart Apache to apply changes
+sudo systemctl restart apache2
+
+# Allow Apache through firewall
+sudo ufw allow 'Apache'
+
+# Inform user about MySQL credentials
+echo -e "${green}Your MySQL database name, username, and password are saved in mysql_credentials.txt${plain}"
+
+# Inform user about successful installation
+echo -e "${green}Laravel has been successfully installed on your server!${plain}"
+echo "You can access your Laravel application at: http://$server_domain"
