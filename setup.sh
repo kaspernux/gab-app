@@ -286,10 +286,11 @@ if [ ! -f "/etc/phpmyadmin/config.inc.php" ]; then
     </Directory>
 EOF
 
-# Create a symbolic link for Apache configuration
-    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
-    sudo a2enconf phpmyadmin
-    sudo systemctl restart apache2
+    # Create a symbolic link for Apache configuration
+        sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+        sudo a2enconf phpmyadmin
+        sudo systemctl restart apache2
+    fi
 fi
 
 # Install Laravel
