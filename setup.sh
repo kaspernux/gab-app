@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# Function to handle errors
+handle_error() {
+    echo -e "\e[31mError: $1\e[0m" >&2
+    exit 1
+}
+
+# Function to backup a file or directory
+backup_file() {
+    if [ -e "$1" ]; then
+        cp -r "$1" "$1.backup" || handle_error "Failed to backup $1"
+        echo "Backup created: $1.backup"
+    fi
+}
+
 # Function to check for conflicting packages and old files
 check_conflicts() {
     echo "Checking for conflicting packages and old files..."
@@ -24,16 +39,12 @@ check_conflicts() {
 
     # Check if old Laravel project directory exists
     if [ -d "/var/www/html/gab-app" ]; then
-        echo "Old Laravel project directory exists. Removing..."
+        echo "Old Laravel project directory exists. Backing up..."
+        backup_file "/var/www/html/gab-app"
+        echo "Removing old Laravel project directory..."
         rm -rf /var/www/html/gab-app
     fi
 }
-
-# Check if the directory exists, if not, create it
-if [ ! -d "/var/www/html/gab-app" ]; then
-    mkdir -p /var/www/html/gab-app
-fi
-
 
 # Print GAB APP ASCII art
 printf "\e[34m
@@ -57,11 +68,23 @@ yellow='\033[0;33m'
 plain='\033[0m'
 
 cur_dir=$(pwd)
-
 # Check root privilege
 if [ "$(id -u)" -ne 0 ]; then
-    echo -e "${red}Fatal error: ${plain}Please run this script with root privilege\n" >&2
-    exit 1
+    handle_error "Please run this script with root privilege"
+fi
+
+# Backup existing data and configurations
+check_conflicts
+
+# Add error handling
+set -e
+
+# Prompt user for server domain or IP address
+read -p "Enter server domain or IP address: " server_domain
+
+# Check if the directory exists, if not, create it
+if [ ! -d "/var/www/html/gab-app" ]; then
+    mkdir -p /var/www/html/gab-app
 fi
 
 # Check OS and set release variable
@@ -258,9 +281,9 @@ sudo a2enconf phpmyadmin
 sudo systemctl reload apache2
 
 # Create MySQL database and user for Laravel
-MYSQL_ROOT_PASSWORD="root"
+MYSQL_ROOT_PASSWORD=$(openssl rand -base64 12)
 MYSQL_LARAVEL_DB="gab_app"
-MYSQL_LARAVEL_USER="root"
+MYSQL_LARAVEL_USER="gab_app_user"
 MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
 
 # Save MySQL password to a text file
@@ -274,14 +297,20 @@ FLUSH PRIVILEGES;
 MYSQL_SCRIPT
 
 # Update Laravel application's .env file with MySQL database configuration
-sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" gab-app/.env
-sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" gab-app/.env
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" gab-app/.env
+sed -i "s/DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
+sed -i "s/DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /var/www/html/gab-app/.env
+sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /var/www/html/gab-app/.env
 
-# Create Apache virtual host configuration for Laravel app
+# Update Apache configuration to point to the Laravel app
+sudo sed -i "s|/var/www/html|/var/www/html/gab-app/public|g" /etc/apache2/sites-available/000-default.conf
+
+# Restart Apache to apply changes
+sudo systemctl restart apache2
+
+# Configure Apache virtual host with user-provided domain or IP address
 cat <<EOF > /etc/apache2/sites-available/gab-app.conf
 <VirtualHost *:80>
-    ServerName your_domain_or_server_ip
+    ServerName $server_domain
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/html/gab-app/public
 
@@ -289,10 +318,13 @@ cat <<EOF > /etc/apache2/sites-available/gab-app.conf
         AllowOverride All
     </Directory>
 
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
+
+# Backup Apache virtual host configuration
+backup_file "/etc/apache2/sites-available/gab-app.conf"
 
 # Navigate to the web server root directory
 cd /var/www/html
@@ -340,15 +372,17 @@ echo -e "${green}Laravel application is installed and configured successfully!${
 echo -e "${green}You can now access your Laravel application${plain}"
 cat <<EOF
 
+cat <<EOF
+
 You can access the admin panel at:
 
-[http://localhost/admin/login](http://localhost/admin/login)
+[http://$server_domain/admin/login](http://$server_domain/admin/login)
 
 - Email: admin@example.com
 - Password: admin123
 
 To log in as a customer, you can directly register as a customer and then log in at:
 
-[http://localhost/customer/register](http://localhost/customer/register)
+[http://$server_domain/customer/register](http://$server_domain/customer/register)
 
 EOF
