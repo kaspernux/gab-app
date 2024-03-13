@@ -351,18 +351,3 @@ echo -e "${green}Your MySQL database name, username, and password are saved in m
 # Inform user about successful installation
 echo -e "${green}Laravel has been successfully installed on your server!${plain}"
 echo "You can access your Laravel application at: http://$server_domain"
-
-cat <<EOF
-
-Please login to access the admin panel at:
-
-[http://$server_domain/admin/login](http://$server_domain/admin/login)
-
-- Email: admin@example.com
-- Password: admin123
-
-To log in as a customer, you can directly register as a customer and then log in at:
-
-[http://$server_domain/customer/register](http://$server_domain/customer/register)
-
-EOF
