@@ -84,7 +84,7 @@ check_conflicts
 set -e
 
 # Prompt user for server domain or IP address
-read -p "${green} Enter server domain or IP address:{plain} " server_domain
+read -p "Enter server domain or IP address:" server_domain
 
 # Check if the directory exists, if not, create it
 if [ ! -d "/var/www/html/gab-app" ]; then
