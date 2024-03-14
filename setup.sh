@@ -135,15 +135,15 @@ sudo apt install -y \
     php-mbstring \
     php-xml \
     php-sqlite3\
-    composer \
-    nodejs \
-    npm \
-    git \
     php-fpm \
     php-common \
     php-xmlrpc \
     php-soap \
     php-zip \
+    composer \
+    nodejs \
+    npm \
+    git \
     fail2ban
 
 # Inform user about successful installation of dependencies
@@ -294,8 +294,9 @@ fi
 # Install Laravel
 if [ ! -f "/var/www/html/gab-app/composer.json" ]; then
     echo -e "${green}Installing Laravel...${plain}"
-    cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
-    composer create-project --prefer-dist laravel/laravel .
+    cd /var/www/html || handle_error "Failed to change directory to /var/www/html"
+    composer create-project --prefer-dist laravel/laravel gab-app
+    cd gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
     composer install
     cp .env.example .env
     php artisan key:generate
@@ -309,7 +310,7 @@ if [ ! -f "/var/www/html/gab-app/composer.json" ]; then
     MYSQL_LARAVEL_PASSWORD=$(openssl rand -base64 12)
 
     # Save MySQL credentials
-    sudo tee /root/mysql-credentials.txt > /dev/null <<EOF
+    sudo tee /root/mysql_credentials.txt > /dev/null <<EOF
     MySQL Database: ${MYSQL_LARAVEL_DB}
     MySQL User: ${MYSQL_LARAVEL_USER}
     MySQL Password: ${MYSQL_LARAVEL_PASSWORD}
@@ -317,19 +318,18 @@ EOF
 
     # Create MySQL database and user for Laravel
     sudo mysql -e \
-    "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB}; \
+    "CREATE DATABASE IF NOT EXISTS ${MYSQL_LARAVEL_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; \
     CREATE USER IF NOT EXISTS '${MYSQL_LARAVEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_LARAVEL_PASSWORD}'; \
     GRANT ALL PRIVILEGES ON ${MYSQL_LARAVEL_DB}.* TO '${MYSQL_LARAVEL_USER}'@'localhost' WITH GRANT OPTION; \
     FLUSH PRIVILEGES;"
 
    # Embed database credentials into Laravel .env file
-    sudo sed -i "s/^# DB_DATABASE=.*/DB_DATABASE=${MYSQL_LARAVEL_DB}/" /var/www/html/gab-app/.env
-    sudo sed -i "s/^# DB_USERNAME=.*/DB_USERNAME=${MYSQL_LARAVEL_USER}/" /var/www/html/gab-app/.env
-    sudo sed -i "s/^# DB_PASSWORD=.*/DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}/" /var/www/html/gab-app/.env
-    sudo sed -i "s/^# DB_CONNECTION=mysql/" /var/www/html/gab-app/.env
-    sudo sed -i "s/^# DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/" /var/www/html/gab-app/.env
-    sudo sed -i "s/^# DB_PORT=3306/DB_PORT=3306/" /var/www/html/gab-app/.env
-
+    sudo sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${MYSQL_LARAVEL_DB}|" .env
+    sudo sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${MYSQL_LARAVEL_USER}|" .env
+    sudo sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${MYSQL_LARAVEL_PASSWORD}|" .env
+    sudo sed -i "s|^# DB_CONNECTION=mysql|DB_CONNECTION=mysql|" .env
+    sudo sed -i "s|^# DB_HOST=127.0.0.1|DB_HOST=127.0.0.1|" .env
+    sudo sed -i "s|^# DB_PORT=3306|DB_PORT=3306|" .env
 
     # Configure Apache virtual host for Laravel
     sudo cp /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/gab-app.conf
@@ -350,9 +350,10 @@ EOF
     # Restart MySQL service
     sudo systemctl restart mysql
 
-    cd /var/www/html/gab-app || handle_error "Failed to change directory to /var/www/html/gab-app"
+    # Run Laravel migrations
     php artisan migrate
-    php artisan serve
+
+    # Restart Apache
     sudo systemctl restart apache2
 
 fi
@@ -368,14 +369,11 @@ echo -e "${green}Laravel has been successfully installed on your server!${plain}
 echo "You can access your Laravel application at: http://$server_domain"
 
 cat <<EOF
+-------------------------------------------------------
+You can access your Laravel application at: 
 
-Please login to access the admin panel at:
-
-[http://$server_domain:80](http://$server_domain)
-
-- Email: admin@example.com
-- Password: admin123
+http://$server_domain
 
 Don't forget to change the email and password after login!
-
+--------------------------------------------------------
 EOF
